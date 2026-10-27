@@ -60,7 +60,7 @@ An unauthenticated MCP request gets `401` with `WWW-Authenticate: Bearer resourc
 
 | Group | Tools |
 |---|---|
-| site | get-site-info, get-options, update-options, list-plugins, list-themes |
+| site | get-site-info, get-options, update-options, list-plugins, list-themes, **get-update-status**, **diagnose** |
 | content | list-post-types, list-posts, get-post, create-post, update-post, replace-in-post, delete-post, duplicate-post, update-post-meta, list-page-templates, list-revisions, restore-revision |
 | taxonomies | list-taxonomies, list-terms, create-term, update-term, delete-term, set-post-terms |
 | fields (SCF/ACF) | list-field-groups, get-field-group, get-fields, update-fields |
@@ -68,7 +68,16 @@ An unauthenticated MCP request gets `401` with `WWW-Authenticate: Bearer resourc
 | menus | list-menus, get-menu, create-menu, add-menu-item, update-menu-item, delete-menu-item, assign-menu-location |
 | theme (read) | list-theme-files, read-theme-file, search-theme-files |
 | theme-write | write-theme-file, edit-theme-file, delete-theme-file, list-theme-backups, restore-theme-backup |
+| manage (**off by default**) | activate-plugin, deactivate-plugin, install-plugin, update-plugin, delete-plugin, switch-theme, install-theme, update-theme |
 | elementor (needs Elementor 4.x) | Elementor's own abilities, named `elementor-<name>`: get-page-structure, create-page, build-composition, manage-elements, update-page-settings, publish-document, create-preview-link, list-posts, list-assets, list-widget-schemas, get-widget-schema, list-dynamic-tags, manage-classes, reorder-classes, manage-global-variable, manage-default-styles, get-default-styles, list-components, manage-component, list-resources, read-resource; Pro: list-site-parts, manage-site-parts. Plus 7 MCP resources (`elementor://global-classes`, `elementor://global-variables`, best practices …) |
+
+## Update tracking, diagnose, plugin/theme management (v0.7.0)
+
+- **`wpmcp-get-update-status`** (site group) — for watching many sites: installed version, latest GitHub release, whether WordPress **auto-updates** this plugin (`auto_update.enabled`, plus `cron_disabled` / `updater_disabled`), and an **update history** where each entry says *how* it happened: `auto` (WordPress background update), `manual-click` ("Update now" on the Plugins screen), `manual-admin` (Dashboard → Updates / bulk), `manual-upload` (zip upload), `wp-cli`, or `detected` (the version changed without WordPress reporting it: files copied / FTP, or the update came from a release older than 0.7.0). `check=true` asks GitHub now instead of using the 6 h cache. `wpmcp-get-site-info` also carries a short `updater` block. The log is the option `wpmcp_update_log` (last 20 entries).
+- **`wpmcp-diagnose`** (site group) — self-test for "403 / Couldn't register with the sign-in service / cannot connect": permalinks, HTTPS, MCP route (must answer 401 + `WWW-Authenticate` when logged out), OAuth discovery + registration endpoints, security plugins (Wordfence, Sucuri, Solid Security, WPS Hide Login, Disable REST API …), Cloudflare hints, file-edit/file-mods constants, auto-update state. Each failed check has a `fix`. These are **loopback** requests from the server to itself: they cannot see a firewall/CDN rule that only blocks outside IPs (e.g. Anthropic's cloud), so the result also lists `curl` commands to run from another network (401 / 200 / 200 / 400 JSON = OK; 403 or an HTML page = blocked).
+- **`manage` group (off by default)** — enable it in *MCP Tools → Tools → Plugins & themes (manage)*. Activate / deactivate / install (wordpress.org slug only) / update / delete plugins; switch / install / update themes. Safety: WP MCP Tools cannot deactivate, delete or update itself through these tools; install/update/delete honour `DISALLOW_FILE_MODS`; delete refuses active plugins; after activating a plugin or switching theme the home page is requested and a fatal error reverts the change.
+- **Fix (affects 0.6.0 and older):** a tool whose capability string equals a global WordPress function name (`activate_plugins`, `delete_plugins`) was *called as a function* by the permission check. Capability strings are now never treated as callbacks. `wpmcp-list-plugins` (capability `activate_plugins`) was affected.
+- Editing plugin files through MCP is **not** included (themes only).
 
 ## Elementor (v0.6.0)
 

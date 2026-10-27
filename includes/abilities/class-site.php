@@ -90,6 +90,23 @@ class WPMCP_Site {
 
 		WPMCP_Registry::add(
 			'site',
+			'get-update-status',
+			array(
+				'label'       => 'Get update status of WP MCP Tools',
+				'description' => 'Installed version, latest GitHub release, whether WordPress auto-updates this plugin, and the history of updates with how each happened (auto / manual-click / manual-admin / manual-upload / wp-cli / detected). Pass check=true to ask GitHub now instead of using the 6 h cache.',
+				'properties'  => array(
+					'check' => $h::s_bool( 'Force a fresh check against GitHub Releases.', false ),
+				),
+				'capability'  => 'activate_plugins',
+				'readonly'    => true,
+				'callback'    => static function ( array $input ) {
+					return WPMCP_Update_Log::status( ! empty( $input['check'] ) );
+				},
+			)
+		);
+
+		WPMCP_Registry::add(
+			'site',
 			'list-themes',
 			array(
 				'label'       => 'List themes',
@@ -154,6 +171,7 @@ class WPMCP_Site {
 			'current_user'       => wp_get_current_user()->user_login,
 			'mcp_tools_version'  => WPMCP_VERSION,
 			'elementor'          => WPMCP_Elementor::info(),
+			'updater'            => WPMCP_Update_Log::summary(),
 		);
 	}
 

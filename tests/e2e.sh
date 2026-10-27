@@ -75,11 +75,28 @@ SRV=$!; trap 'kill $SRV 2>/dev/null || true' EXIT
 for i in $(seq 1 30); do curl -s -o /dev/null "http://localhost:$PORT/" && break; sleep 0.5; done
 
 STATUS=0
-python3 "$PLUGIN_DIR/tests/smoke.py" "http://localhost:$PORT" admin "$(cat "$WORK/app-password.txt")" || STATUS=1
+PW="$(cat "$WORK/app-password.txt")"
+python3 "$PLUGIN_DIR/tests/smoke.py" "http://localhost:$PORT" admin "$PW" || STATUS=1
+# v0.7.0: new tools; the "manage" group is off by default ...
+python3 "$PLUGIN_DIR/tests/tools070.py" "http://localhost:$PORT" admin "$PW" || STATUS=1
 if [ -s "$WP/debug.log" ]; then
   echo "---- debug.log"; cat "$WP/debug.log"
   if grep -qiE "PHP (Fatal|Warning|Deprecated|Notice)|_doing_it_wrong|deprecated" "$WP/debug.log"; then echo "FAIL debug.log has PHP notices"; STATUS=1; fi
 else
   echo "PASS debug.log is empty"
 fi
+
+# ... then switch it on (the option is protected from MCP) and test it with dummy plugins. This runs AFTER the debug.log check because it triggers errors on purpose (a plugin that fatals).
+mkdir -p "$WP/wp-content/plugins/wpmcp-dummy" "$WP/wp-content/plugins/wpmcp-fatal"
+printf '<?php\n/* Plugin Name: WPMCP Dummy */\n' > "$WP/wp-content/plugins/wpmcp-dummy/wpmcp-dummy.php"
+printf '<?php\n/* Plugin Name: WPMCP Fatal */\nadd_action( "init", function () { undefined_function_call(); } );\n' > "$WP/wp-content/plugins/wpmcp-fatal/wpmcp-fatal.php"
+cat > "$WORK/enable-manage.php" <<'PHP'
+<?php
+$_SERVER['HTTP_HOST'] = 'localhost:' . getenv( 'PORT' );
+require getenv( 'WPDIR' ) . '/wp-load.php';
+$s = WPMCP_Settings::all(); $s['groups']['manage'] = 1; update_option( WPMCP_Settings::OPTION, $s );
+echo "manage group on\n";
+PHP
+WPDIR="$WP" PORT="$PORT" php "$WORK/enable-manage.php"
+python3 "$PLUGIN_DIR/tests/tools070.py" "http://localhost:$PORT" admin "$PW" --manage || STATUS=1
 exit $STATUS

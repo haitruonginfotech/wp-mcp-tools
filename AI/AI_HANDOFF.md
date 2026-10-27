@@ -17,6 +17,7 @@ It was first installed on the Local site `mklogistics.com.sg` (`D:\localwp\mklog
   `/MIR` also deletes repo files that are not on the site, and `/XD .git` keeps the git folder. Reverse direction (after merging an update PR): `git pull`, then the same robocopy with source and destination swapped (still `/XD .git`).
 
 ## Current Status
+**v0.7.0 (2026-10-27): update tracking + diagnose + manage group** (details in "Completed"). Committed locally and tagged `v0.7.0`; release when the owner pushes `master` + the tag. Zip: `wp-mcp-tools-0.7.0.zip` (built with `git archive`; this session could not write outside the repo folder, so it is in the repo folder (ignored by git, `*.zip`) — move it next to the repo at `D:\wordpress\AI\`).
 **v0.6.0 (2026-10-23): Elementor bridge** — Elementor 4.x's own MCP abilities (22 tools + 7 resources with Pro) served on the WP MCP Tools server. Committed locally; release when the owner pushes `master` + tag `v0.6.0` (sites on 0.5.0 then update themselves). Installed on thebananaleafapolocom.local (Elementor/Pro installed there but NOT active as of this commit).
 **v0.5.0 (2026-10-23): self-updater + automatic adapter releases.** **Released 2026-10-23**: https://github.com/haitruonginfotech/wp-mcp-tools/releases/tag/v0.5.0 (asset `wp-mcp-tools-0.5.0.zip`, SHA-256 identical to `D:\wordpress\AI\wp-mcp-tools-0.5.0.zip`); installed on thebananaleafapolocom.local. Sites on ≤0.4.0 must install 0.5.0 once by hand (zip); from then on they update from GitHub Releases.
 **v0.4.0 (2026-10-22): MCP Adapter 0.7.1 bundled.** Tested on WP 7.1.3 + SQLite (see Completed). NOT yet on any live site; other sites still run 0.3.x + the standalone MCP Adapter plugin.
@@ -30,6 +31,13 @@ v0.3.0 adds local-file uploads (upload link + chunked base64). It is tested in t
 None in progress. Owner: close PR #24 (its content is in v0.5.0) and the old dependabot PRs; install 0.5.0 once on the other sites (Plugins → Upload → "Replace current with uploaded"), then click "Enable auto-updates"; the standalone MCP Adapter plugin can be removed there.
 
 ## Completed
+- v0.7.0 (2026-10-27): owner asked to "improve the plugin" and to watch on several projects whether it auto-updates or is updated by a manual click.
+  - `includes/class-update-log.php` (`WPMCP_Update_Log`): history of this plugin's updates with source `auto` / `manual-click` / `manual-admin` / `manual-upload` / `wp-cli` / `detected`, auto-update state, tool `wpmcp-get-update-status`, `updater` block in `get-site-info`.
+  - `includes/abilities/class-diagnose.php`: tool `wpmcp-diagnose` (see README). Motivated by the owner's connector error on benmart.com.sg (403 on the MCP URL = firewall outside the plugin).
+  - `includes/abilities/class-manage.php`: group `manage` (default OFF), 8 tools. `WPMCP_Theme::loopback_check()` is now public (reused for rollback).
+  - Bug fix in `WPMCP_Registry` (capability string equal to a WP function name was called as a callback; affected `list-plugins` and would have broken the new tools).
+  - Verified in the sandbox (WP 7.1.3 from GitHub + SQLite plugin 3.1.1 release zip, PHP 8.3): `tests/e2e.sh` OK — 48 tools by default, 56 with the manage group, debug.log empty; `tests/tools070.py` (update status, diagnose all-OK, manage tools on dummy plugins incl. fatal-plugin rollback, self-protection, offline install fails cleanly); `tests/updater.php` with a fake 0.7.1 release: WordPress background auto-update → log `auto`; Update-now via the Ajax skin → log `manual-click`; renamed folder `wp-mcp-tools-main` → OK; copied files with another version → `detected`.
+  - **UNVERIFIED:** installing / updating from real wordpress.org (sandbox has no internet; only the error path was tested); `manual-admin` and `manual-upload` / `wp-cli` sources (code paths are simple but were not run); the admin UI of the new group (generic group card, not opened in a browser).
 - v0.6.0 (2026-10-23): **Elementor bridge** (owner: "Elementor has MCP for the builder, add it to wp-mcp-tools"; DECISIONS "v0.6").
   - Found: Elementor 4.3.5 ships `modules/mcp` (abilities `elementor/*`, own server `/wp-json/elementor/mcp` behind option `elementor_mcp_enabled`, bundled mcp-adapter 0.6.1 via Jetpack Autoloader → our 0.7.1 wins); Elementor Pro 4.3.2 adds `elementor/list-site-parts`, `elementor/manage-site-parts` to the same registry.
   - `includes/integrations/class-elementor.php` (`WPMCP_Elementor`): group `elementor` (default on, "available" only when the module exists); at `wp_abilities_api_init` priority 20 registers abilities Elementor did not (its setting off) via Elementor's `Abstract_Ability::register()`; `tool_ids()` / `resource_ids()` merged into `create_server()` (resources now passed too); `catalog()` rows in the admin Tools table; `info()` in `wpmcp-get-site-info` (`elementor`: version, pro_version, atomic_editor, served_here, elementor_own_mcp_server, tools …).
@@ -100,6 +108,9 @@ None in progress. Owner: close PR #24 (its content is in v0.5.0) and the old dep
   - Settings option and all OAuth/MCP behaviour are unchanged — 0.3.1 is a drop-in replacement for 0.3.0.
 
 ## Pending
+- Owner: push `master` + tag `v0.7.0` (`git push && git push origin v0.7.0`); the `release.yml` workflow attaches the zip. Then on a few sites: Plugins → Check for updates → note whether 0.7.0 arrives by itself (auto-update enabled) or needs a click; afterwards call `wpmcp-get-update-status` on each site to read `auto_update.enabled` and the `history` source. The first update from 0.6.0 shows `detected` (0.6.0 has no log code); from 0.7.0 on the source is exact.
+- benmart.com.sg: connector 403 → run `wpmcp-diagnose` (or the curl commands in the diagnose result from outside); likely a Cloudflare / host WAF / security plugin rule for `/wp-json/wp-mcp-tools/`, `/wpmcp-oauth/`, `/.well-known/`.
+- Idea: plugin file read/write group (reuse the theme-file safety code); an admin "Diagnostics" tab.
 - TODO: first `git push` from Windows; Settings → Actions → General → allow GitHub Actions to create and approve pull requests; run the update workflow once.
 - TODO: roll out 0.4.0 to the other sites (mklogistics.sg, mylivorahome.sg, lawrys.com.sg …): install the zip, then deactivate + delete the standalone MCP Adapter plugin there.
 - RISK: upstream may drop bundled-library support in a future release; the weekly e2e PR is the early warning.
@@ -126,6 +137,7 @@ See `ARCHITECTURE.md`.
 - `wp-mcp-tools.php`: constants, requires, activation hook (creates the OAuth table), deactivation hook (clears the purge cron).
 - `includes/class-plugin.php`: modules, Abilities hooks, `create_server()`. The transport permission returns `false` when logged out, so there is no log noise and the OAuth server adds 401 + `WWW-Authenticate`.
 - `includes/class-registry.php`: declares tools and builds abilities.
+- `includes/class-update-log.php`: update history + auto-update state. `includes/abilities/class-diagnose.php`, `class-manage.php`: new tools (v0.7.0).
 - `includes/class-settings.php`: option `wpmcp_settings` (groups, endpoint_capability, oauth_enabled, public_url, auth_method, expose_default_server) and sanitize.
 - `includes/class-admin-bar.php`: admin-bar MCP status menu + on/off toggle.
 - `includes/class-admin.php`: admin UI and admin-post actions (`wpmcp_oauth_signout`, `wpmcp_oauth_remove`, `wpmcp_app_password`).
@@ -145,6 +157,8 @@ See `DECISIONS.md`.
 Activate WP MCP Tools (no separate MCP Adapter plugin needed). Open **MCP Tools → Connection**, choose OAuth or Application password, pick a client and copy the config.
 
 ## How To Test
+**v0.7.0 tests:** `tests/tools070.py` (run by `e2e.sh`, default + `--manage`), `tests/updater.php` (`NEWVER=0.7.1`, optional `MODE=ajax`; needs `AUTOMATIC_UPDATER_DISABLED` removed from wp-config and the site served on localhost:8089). When wordpress.org is blocked: WP from the GitHub tag zip, SQLite plugin from the GitHub *release asset* `plugin-sqlite-database-integration.zip` (the tag/branch source zips do not work).
+
 **Quick e2e (v0.4.0+):** `bash tests/e2e.sh /tmp/e2e` — fresh WordPress (latest, or `WP_ZIP=`) + SQLite (`SQLITE_ZIP=`), then `tests/smoke.py` (401, initialize, tools/list, tools/call) and a debug.log check. `EXTRA_PLUGIN_DIR=/path/to/mcp-adapter` also activates the standalone adapter. Needs PHP 8.x with pdo_sqlite, python3, unzip, curl.
 
 Older sandbox recipe:

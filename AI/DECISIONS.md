@@ -19,6 +19,12 @@
 - `acf_get_value('option', …)` returns empty. The id must be normalised to `options`.
 - Firing `wpmcp_register_tools` on `plugins_loaded` is too early for themes. It now runs on `after_setup_theme`.
 
+## v0.7 — Update tracking, diagnose, manage group (2026-10-27)
+- Owner wants to watch, on several client sites, whether the plugin updates by itself or by a manual click → `WPMCP_Update_Log` records the source of every update of THIS plugin (hook `upgrader_process_complete`, runs in the old code, so "from" = running version, "to" = new header) and exposes it via `get-update-status` / `get-site-info`. `WP_Ajax_Upgrader_Skin` extends `Automatic_Upgrader_Skin`: test the Ajax skin first or manual clicks are logged as auto. Versions that change without the hook are logged `detected` on the next load. The first update FROM 0.6.0 (no log code yet) therefore shows `detected`.
+- Owner hit "Couldn't register with the sign-in service" (403 on the MCP URL before OAuth even starts): the cause was outside the plugin (WAF / host / security plugin). `wpmcp-diagnose` checks the plugin side with loopback requests and prints curl commands for the outside view; it cannot prove that outside IPs are allowed. Registration is probed with an empty POST (rejected with 400 by our handler, nothing stored).
+- Plugin/theme management is a separate group, **off by default** (`'manage' => 0`): installs from wordpress.org by slug only (no arbitrary zip URLs), no self-deactivate/delete/update, rollback on fatal after activate/switch. Editing plugin FILES via MCP was deliberately left out (higher risk than theme files; no backups/rollback design yet).
+- Bug fixed: capability strings that are also WP function names (`activate_plugins`, `delete_plugins`) were executed as callbacks by `WPMCP_Registry`; now `! is_string( $capability ) && is_callable(...)`.
+
 ## v0.6 — Elementor bridge (2026-10-23)
 - Elementor 4.3+ already implements builder MCP tools (atomic widgets, classes, variables, components, site parts with Pro). Re-implementing them would duplicate and drift; the bridge only registers Elementor's own ability objects when Elementor has not, and lists their ids on our server.
 - Not forcing Elementor's own setting/server on: our server is independent; both can run together.

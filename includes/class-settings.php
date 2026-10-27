@@ -28,6 +28,8 @@ class WPMCP_Settings {
 				'theme'       => 1,
 				'theme-write' => 1,
 				'elementor'   => 1,
+				// Installing / updating / deleting plugins and themes: opt-in.
+				'manage'      => 0,
 			),
 			// Also flag abilities as public on the MCP Adapter default server.
 			'expose_default_server' => 0,

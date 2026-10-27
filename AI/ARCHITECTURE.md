@@ -87,3 +87,9 @@ client ── POST /wpmcp-oauth/token (refresh_token) → rotation: the old gran
   - `POST` handles `files[]` (or `file`). `format=json` returns JSON.
   - Status codes: 404 for an invalid token or MCP/Media off, 410 for a closed or expired link, 400 when no file is received.
 - Chunks: `uploads/wpmcp-tmp/<id>.part` plus transient `wpmcp_chunk_<id>` (1 day). The daily `wpmcp_oauth_purge` cron removes `.part` files older than 1 day.
+
+
+## Update log, diagnose, manage (v0.7.0)
+- `class-update-log.php`: `upgrader_process_complete` (priority 5) → entry in option `wpmcp_update_log`; `plugins_loaded` compares `WPMCP_VERSION` with option `wpmcp_version_seen` (source `detected`). Source order: Ajax skin → `manual-click`; Automatic skin / cron → `auto`; WP-CLI; `install` action → `manual-upload`; admin → `manual-admin`.
+- `abilities/class-diagnose.php`: loopback probes (`sslverify=false`, no redirects) of the MCP route, `/.well-known/*` and `/wpmcp-oauth/register` (empty POST → 400).
+- `abilities/class-manage.php`: group `manage` (default off); uses `Plugin_Upgrader` / `Theme_Upgrader` with `Automatic_Upgrader_Skin`; rollback through `WPMCP_Theme::loopback_check()`.

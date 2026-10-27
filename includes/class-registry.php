@@ -167,7 +167,9 @@ class WPMCP_Registry {
 					},
 					'permission_callback' => static function ( $input = null ) use ( $capability ) {
 						$input = is_array( $input ) ? $input : array();
-						if ( is_callable( $capability ) ) {
+						// A capability STRING is never a callback, even when a global function has the same name
+						// (e.g. "activate_plugins" and "delete_plugins" are also WordPress functions).
+						if ( ! is_string( $capability ) && is_callable( $capability ) ) {
 							return call_user_func( $capability, $input );
 						}
 						return current_user_can( $capability );

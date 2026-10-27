@@ -704,6 +704,7 @@ class WPMCP_Admin {
 			'theme'       => 'dashicons-admin-appearance',
 			'theme-write' => 'dashicons-edit-page',
 			'elementor'   => 'dashicons-layout',
+			'manage'      => 'dashicons-admin-plugins',
 		);
 		return $map[ $slug ] ?? 'dashicons-admin-generic';
 	}

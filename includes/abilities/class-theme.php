@@ -500,7 +500,7 @@ class WPMCP_Theme {
 	 *
 	 * @return array{status:string,detail?:string}
 	 */
-	private static function loopback_check(): array {
+	public static function loopback_check(): array {
 		$url = add_query_arg( 'wpmcp_check', time(), home_url( '/' ) );
 		$res = wp_remote_get(
 			$url,
