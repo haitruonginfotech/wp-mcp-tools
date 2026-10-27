@@ -79,6 +79,8 @@ PW="$(cat "$WORK/app-password.txt")"
 python3 "$PLUGIN_DIR/tests/smoke.py" "http://localhost:$PORT" admin "$PW" || STATUS=1
 # v0.7.0: new tools; the "manage" group is off by default ...
 python3 "$PLUGIN_DIR/tests/tools070.py" "http://localhost:$PORT" admin "$PW" || STATUS=1
+# v0.7.1: OAuth approval / error pages and the upload-link page
+python3 "$PLUGIN_DIR/tests/oauth_pages.py" "http://localhost:$PORT" admin "Admin-pass-123!" "$PW" || STATUS=1
 if [ -s "$WP/debug.log" ]; then
   echo "---- debug.log"; cat "$WP/debug.log"
   if grep -qiE "PHP (Fatal|Warning|Deprecated|Notice)|_doing_it_wrong|deprecated" "$WP/debug.log"; then echo "FAIL debug.log has PHP notices"; STATUS=1; fi

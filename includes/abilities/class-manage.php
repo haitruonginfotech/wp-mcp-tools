@@ -26,7 +26,7 @@ class WPMCP_Manage {
 			'manage',
 			array(
 				'label'       => 'Plugins & themes (manage)',
-				'description' => 'Activate, deactivate, install from wordpress.org, update and delete plugins; switch, install and update themes. Off by default.',
+				'description' => 'Activate, deactivate, install from wordpress.org, update and delete plugins; switch, install and update themes.',
 			)
 		);
 

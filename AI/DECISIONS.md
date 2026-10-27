@@ -19,6 +19,9 @@
 - `acf_get_value('option', …)` returns empty. The id must be normalised to `options`.
 - Firing `wpmcp_register_tools` on `plugins_loaded` is too early for themes. It now runs on `after_setup_theme`.
 
+## v0.7.1 — Sign-in pages redesign (2026-10-27)
+- Owner asked for nicer pages after connecting. The final "Authorization successful" page is the CLIENT's local callback page and cannot be styled; only our own pages were redesigned: `WPMCP_OAuth_Server::page()` (shared with the upload link; signature kept, new optional `$opts`), `consent_page()`, new `error_page()`. Inline CSS, no external resources, `prefers-color-scheme` dark mode. Class names/ids used by the upload flow (`.lead .muted .actions .btn .primary .err #wpmcp-files #wpmcp-submit #wpmcp-added`) are kept. Groups in `CAUTION_GROUPS` (`theme-write`, `manage`) get a caution tag on the approval page.
+
 ## v0.7 — Update tracking, diagnose, manage group (2026-10-27)
 - Owner wants to watch, on several client sites, whether the plugin updates by itself or by a manual click → `WPMCP_Update_Log` records the source of every update of THIS plugin (hook `upgrader_process_complete`, runs in the old code, so "from" = running version, "to" = new header) and exposes it via `get-update-status` / `get-site-info`. `WP_Ajax_Upgrader_Skin` extends `Automatic_Upgrader_Skin`: test the Ajax skin first or manual clicks are logged as auto. Versions that change without the hook are logged `detected` on the next load. The first update FROM 0.6.0 (no log code yet) therefore shows `detected`.
 - Owner hit "Couldn't register with the sign-in service" (403 on the MCP URL before OAuth even starts): the cause was outside the plugin (WAF / host / security plugin). `wpmcp-diagnose` checks the plugin side with loopback requests and prints curl commands for the outside view; it cannot prove that outside IPs are allowed. Registration is probed with an empty POST (rejected with 400 by our handler, nothing stored).

@@ -348,13 +348,29 @@ class WPMCP_OAuth_Server {
 
 		// Errors that must NOT redirect (unknown client / redirect).
 		if ( ! $client ) {
-			self::page( 'Unknown application', '<p>This application is not registered with this site (or it was removed). Reconnect it from your AI client.</p>', 400 );
+			self::error_page(
+				'Unknown application',
+				'This application is not registered with this site, or it was removed from the list of connected apps.',
+				array(
+					'Go back to your AI client (Claude, ChatGPT, Cursor …).',
+					'Remove the connector and add it again, so it registers itself with this site.',
+					'Approve the connection on the page that opens.',
+				)
+			);
 		}
 		if ( '' === $redirect_uri && 1 === count( $client['redirect_uris'] ) ) {
 			$redirect_uri = $client['redirect_uris'][0];
 		}
 		if ( ! self::redirect_matches( $client, $redirect_uri ) ) {
-			self::page( 'Invalid redirect', '<p>The redirect address does not match the one this application registered.</p>', 400 );
+			self::error_page(
+				'Invalid redirect address',
+				'The address this application wants to return to does not match the one it registered. Nothing was approved.',
+				array(
+					'Close this tab and start the connection again from your AI client.',
+					'If it keeps happening, remove the connector and add it again.',
+					'Only continue if you started this connection yourself.',
+				)
+			);
 		}
 
 		$state = (string) ( $p['state'] ?? '' );
@@ -394,7 +410,14 @@ class WPMCP_OAuth_Server {
 		// Consent submitted?
 		if ( 'POST' === self::method() && isset( $p['wpmcp_decision'] ) ) {
 			if ( ! wp_verify_nonce( (string) ( $p['_wpnonce'] ?? '' ), 'wpmcp_oauth_consent_' . $client_id ) ) {
-				self::page( 'Session expired', '<p>Please go back to your AI client and start the connection again.</p>', 400 );
+				self::error_page(
+					'Session expired',
+					'The approval page was open for too long, so the request is no longer valid. Nothing was approved.',
+					array(
+						'Go back to your AI client.',
+						'Start the connection again and approve it within a few minutes.',
+					)
+				);
 			}
 			if ( 'approve' !== $p['wpmcp_decision'] ) {
 				self::redirect_with( $redirect_uri, $base + array( 'error' => 'access_denied' ) );
@@ -417,6 +440,9 @@ class WPMCP_OAuth_Server {
 		self::consent_page( $client, $user, $p, $redirect_uri );
 	}
 
+	/** Groups whose tools can change files or plugins: shown with a caution label on the approval page. */
+	const CAUTION_GROUPS = array( 'theme-write', 'manage' );
+
 	private static function consent_page( array $client, WP_User $user, array $p, string $redirect_uri ): void {
 		$keep   = array( 'response_type', 'client_id', 'code_challenge', 'code_challenge_method', 'state', 'scope', 'resource' );
 		$hidden = '';
@@ -428,53 +454,166 @@ class WPMCP_OAuth_Server {
 		$hidden .= '<input type="hidden" name="redirect_uri" value="' . esc_attr( $redirect_uri ) . '">';
 		$hidden .= wp_nonce_field( 'wpmcp_oauth_consent_' . $client['client_id'], '_wpnonce', false, false );
 
-		$groups = array();
+		$perms = '';
 		foreach ( WPMCP_Registry::groups() as $slug => $g ) {
-			if ( WPMCP_Registry::group_active( $slug ) ) {
-				$groups[] = '<li>' . esc_html( $g['label'] ) . ' — ' . esc_html( $g['description'] ) . '</li>';
+			if ( ! WPMCP_Registry::group_active( $slug ) ) {
+				continue;
 			}
+			$caution = in_array( $slug, self::CAUTION_GROUPS, true ) ? '<span class="tag">Changes files or plugins</span>' : '';
+			$perms  .= '<li>' . self::svg( 'check' ) . '<div><strong>' . esc_html( $g['label'] ) . $caution . '</strong><span>' . esc_html( $g['description'] ) . '</span></div></li>';
 		}
-		$host = (string) wp_parse_url( $redirect_uri, PHP_URL_HOST );
 
-		$body  = '<p class="lead"><strong>' . esc_html( $client['client_name'] ) . '</strong> wants to connect to <strong>' . esc_html( get_bloginfo( 'name' ) ) . '</strong> and act as <strong>' . esc_html( $user->display_name ) . '</strong> (' . esc_html( $user->user_login ) . ').</p>';
-		$body .= '<p>It will be able to use these tools with your permissions:</p><ul>' . implode( '', $groups ) . '</ul>';
-		$body .= '<p class="muted">After approval you will be sent to <code>' . esc_html( $host ?: $redirect_uri ) . '</code>. Only approve apps you started connecting yourself. You can sign the app out any time in MCP Tools → Connection.</p>';
+		$app   = (string) $client['client_name'];
+		$site  = (string) get_bloginfo( 'name' );
+		$host  = (string) wp_parse_url( $redirect_uri, PHP_URL_HOST );
+		$roles = (array) $user->roles;
+		$role  = $roles ? ucfirst( (string) reset( $roles ) ) : '';
+		$init  = static function ( string $name ): string {
+			return strtoupper( function_exists( 'mb_substr' ) ? mb_substr( trim( $name ) ?: '?', 0, 1 ) : substr( trim( $name ) ?: '?', 0, 1 ) );
+		};
+		$site_icon = get_site_icon_url( 96 );
+
+		$hero  = '<div class="link" aria-hidden="true">';
+		$hero .= '<span class="tile">' . esc_html( $init( $app ) ) . '</span><span class="dots"><i></i><i></i><i></i></span>';
+		$hero .= '<span class="tile site">' . ( $site_icon ? '<img src="' . esc_url( $site_icon ) . '" alt="">' : self::svg( 'plug' ) ) . '</span></div>';
+
+		$body  = '<div class="who"><span class="avatar">' . esc_html( $init( $user->display_name ?: $user->user_login ) ) . '</span><div><strong>' . esc_html( $user->display_name ?: $user->user_login ) . '</strong><span>' . esc_html( $user->user_login . ( $role ? ' · ' . $role : '' ) ) . '</span></div><span class="badge">Signed in</span></div>';
+		$body .= '<h2 class="sec">It will be able to</h2><ul class="perms">' . $perms . '</ul>';
+		$body .= '<p class="muted small">Everything runs with <strong>your</strong> WordPress permissions. You can sign the app out at any time in <em>MCP Tools → Connection</em>.</p>';
+		$body .= '<div class="note">' . self::svg( 'info' ) . '<p>After you approve, you are sent back to <code>' . esc_html( $host ?: $redirect_uri ) . '</code>. Only approve apps you started connecting yourself.</p></div>';
 		$body .= '<form method="post" action="' . esc_url( self::endpoint( 'authorize' ) ) . '">' . $hidden;
 		$body .= '<div class="actions"><button type="submit" name="wpmcp_decision" value="deny" class="btn">Deny</button><button type="submit" name="wpmcp_decision" value="approve" class="btn primary">Approve</button></div></form>';
 
-		self::page( 'Connect ' . $client['client_name'], $body );
+		self::page(
+			'Connect ' . $app,
+			$body,
+			200,
+			array(
+				'hero'  => $hero,
+				'h1'    => 'Connect ' . $app . ' to ' . $site,
+				'sub'   => $app . ' is asking to use the tools of this site on your behalf.',
+				'bare'  => true,
+			)
+		);
 	}
 
-	/** Render a standalone HTML page and exit. */
-	public static function page( string $title, string $body, int $status = 200 ): void {
+	/**
+	 * Friendly error page with "what to do" steps. Exits.
+	 *
+	 * @param string   $title   Heading.
+	 * @param string   $message What happened.
+	 * @param string[] $steps   What the person can do.
+	 */
+	public static function error_page( string $title, string $message, array $steps = array(), int $status = 400 ): void {
+		$body = '';
+		if ( $steps ) {
+			$body .= '<h2 class="sec">What to do</h2><ol class="steps">';
+			foreach ( $steps as $step ) {
+				$body .= '<li>' . esc_html( $step ) . '</li>';
+			}
+			$body .= '</ol>';
+		}
+		$body .= '<p class="muted small">You can close this tab. Nothing was changed on your site.</p>';
+		self::page( $title, $body, $status, array( 'hero' => '<div class="link"><span class="tile bad">' . self::svg( 'warn' ) . '</span></div>', 'h1' => $title, 'sub' => $message, 'bare' => true, 'tone' => 'error' ) );
+	}
+
+	/** Small inline icons (stroke = currentColor). */
+	private static function svg( string $name ): string {
+		$paths = array(
+			'check' => '<path d="M4 10.5l4 4 8-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+			'info'  => '<circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 9v5M10 6.2v.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+			'warn'  => '<path d="M10 2.5l8 14H2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 8v4M10 14.2v.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+		);
+		if ( 'plug' === $name ) {
+			return '<svg viewBox="0 0 20 20" width="24" height="24" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="' . WPMCP_Admin::ICON_PATH . '"/></svg>';
+		}
+		return '<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true" focusable="false">' . ( $paths[ $name ] ?? '' ) . '</svg>';
+	}
+
+	/**
+	 * Render a standalone HTML page and exit. Also used by the upload link (class-uploads.php).
+	 *
+	 * @param string $title  Browser title (and heading unless $opts['h1'] is set).
+	 * @param string $body   HTML, built from escaped parts by the caller.
+	 * @param int    $status HTTP status.
+	 * @param array  $opts   hero (HTML above the heading), h1, sub (text under the heading), tone (error), bare.
+	 */
+	public static function page( string $title, string $body, int $status = 200, array $opts = array() ): void {
 		status_header( $status );
 		nocache_headers();
 		header( 'Content-Type: text/html; charset=utf-8' );
 		header( 'X-Frame-Options: DENY' );
 		header( "Content-Security-Policy: frame-ancestors 'none'" );
-		$icon = get_site_icon_url( 64 );
+		$h1       = (string) ( $opts['h1'] ?? $title );
+		$sub      = (string) ( $opts['sub'] ?? '' );
+		$hero     = (string) ( $opts['hero'] ?? '' );
+		$tone     = (string) ( $opts['tone'] ?? '' );
+		$site     = (string) get_bloginfo( 'name' );
+		$home     = (string) wp_parse_url( home_url(), PHP_URL_HOST );
+		$is_ssl   = 0 === strpos( self::base(), 'https://' );
+		$lock     = $is_ssl ? 'Secure connection' : 'Not encrypted (http)';
 		?>
 <!doctype html>
 <html <?php language_attributes(); ?>>
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title><?php echo esc_html( $title . ' — ' . get_bloginfo( 'name' ) ); ?></title>
+<meta name="color-scheme" content="light dark">
+<title><?php echo esc_html( $title . ' — ' . $site ); ?></title>
 <meta name="robots" content="noindex,nofollow">
 <style>
-body{margin:0;background:#f0f0f1;font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1d2327}
-.card{max-width:480px;margin:8vh auto;background:#fff;border:1px solid #dcdcde;border-radius:10px;padding:28px 28px 24px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.head{display:flex;align-items:center;gap:12px;margin-bottom:12px}.head img{width:40px;height:40px;border-radius:8px}
-h1{font-size:20px;margin:0}.lead{font-size:16px}.muted{color:#646970;font-size:13px}code{background:#f6f7f7;padding:1px 5px;border-radius:4px}
-ul{padding-left:18px;margin:6px 0 14px}li{margin:3px 0;font-size:14px}
-.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
-.btn{font:inherit;padding:9px 18px;border-radius:6px;border:1px solid #c3c4c7;background:#fff;cursor:pointer}
-.btn.primary{background:#2271b1;border-color:#2271b1;color:#fff}.btn:hover{filter:brightness(.96)}
-@media (max-width:560px){.card{margin:0;border-radius:0;min-height:100vh;box-sizing:border-box}}
+:root{--bg:#eef3f2;--card:#fff;--ink:#14201f;--muted:#5b6b69;--line:#dbe4e2;--soft:#f4f8f7;--accent:#0f766e;--accent-ink:#fff;--accent-soft:#e3f3f0;--warn:#92400e;--warn-soft:#fef3c7;--bad:#b91c1c;--bad-soft:#fee2e2;--shadow:0 1px 2px rgba(16,40,38,.06),0 12px 32px rgba(16,40,38,.08)}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1211;--card:#142120;--ink:#e8f2f0;--muted:#9db3af;--line:#243634;--soft:#0f1b1a;--accent:#2dd4bf;--accent-ink:#052a26;--accent-soft:#12302c;--warn:#fcd34d;--warn-soft:#33270c;--bad:#fca5a5;--bad-soft:#3a1616;--shadow:0 1px 2px rgba(0,0,0,.4),0 12px 32px rgba(0,0,0,.35)}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(1200px 500px at 50% -10%,var(--accent-soft),transparent 70%),var(--bg);color:var(--ink);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.shell{max-width:520px;margin:0 auto;padding:clamp(16px,6vh,56px) 16px 32px}
+.brand{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:18px;color:var(--muted);font-size:13px;font-weight:600;letter-spacing:.02em}
+.brand .mark{width:28px;height:28px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center}
+.brand .mark svg{width:18px;height:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px 28px 24px;box-shadow:var(--shadow)}
+.link{display:flex;align-items:center;justify-content:center;gap:12px;margin:2px 0 16px}
+.tile{width:56px;height:56px;border-radius:16px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:24px;font-weight:700;overflow:hidden;border:1px solid var(--line)}
+.tile img{width:100%;height:100%;object-fit:cover}.tile.site{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.tile.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}.tile.bad svg{width:28px;height:28px}
+.dots{display:flex;gap:5px}.dots i{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.35}.dots i:nth-child(2){opacity:.65}.dots i:nth-child(3){opacity:1}
+h1{font-size:22px;line-height:1.25;margin:0 0 6px;text-align:center;letter-spacing:-.01em}
+.sub{margin:0 0 20px;text-align:center;color:var(--muted)}
+h2.sec{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:20px 0 8px}
+.lead{font-size:16px}.muted{color:var(--muted)}.small{font-size:13px}
+code{background:var(--soft);border:1px solid var(--line);padding:1px 6px;border-radius:6px;font-size:.92em;overflow-wrap:anywhere}
+.who{display:flex;align-items:center;gap:12px;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.who>div{flex:1;min-width:0;display:flex;flex-direction:column}.who strong{font-size:14px}.who span{font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.avatar{flex:none;width:36px;height:36px;border-radius:50%;background:var(--accent);color:var(--accent-ink)!important;display:grid;place-items:center;font-weight:700}
+.badge{flex:none;font-size:11px!important;font-weight:600;color:var(--accent)!important;background:var(--accent-soft);border-radius:999px;padding:2px 9px}
+ul{padding:0;margin:0;list-style:none}
+.perms li{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}.perms li:first-child{border-top:0}
+.perms svg{flex:none;margin-top:2px;color:var(--accent)}.perms div{display:flex;flex-direction:column;min-width:0}.perms strong{font-size:14px}.perms span{font-size:13px;color:var(--muted)}
+.tag{display:inline-block;margin-left:8px;font-size:11px;font-weight:600;color:var(--warn);background:var(--warn-soft);border-radius:999px;padding:1px 8px;vertical-align:1px}
+.perms strong .tag{font-weight:600}
+.note{display:flex;gap:10px;align-items:flex-start;margin:16px 0 0;padding:12px 14px;border-radius:12px;background:var(--warn-soft);color:var(--warn)}
+.note svg{flex:none;margin-top:2px}.note p{margin:0;font-size:13.5px}.note code{background:rgba(255,255,255,.5);border-color:transparent}
+.steps{margin:0;padding-left:20px}.steps li{margin:6px 0;padding-left:4px}
+ul.err{color:var(--bad);margin:8px 0}ul.err li{margin:3px 0;font-size:14px}
+#wpmcp-added{margin:8px 0 14px}#wpmcp-added li{padding:6px 0;border-top:1px solid var(--line);font-size:14px}
+input[type=file]{width:100%;padding:14px;border:1.5px dashed var(--line);border-radius:12px;background:var(--soft);color:var(--ink);font:inherit}
+.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px}
+.btn{font:inherit;font-weight:600;min-height:46px;padding:0 22px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;transition:transform .05s,filter .15s}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn:hover{filter:brightness(.97)}.btn:active{transform:translateY(1px)}
+.btn:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.foot{display:flex;align-items:center;justify-content:center;gap:8px;margin:16px 0 0;color:var(--muted);font-size:12.5px}
+.foot b{font-weight:600;color:var(--ink)}
+@media (max-width:560px){.shell{padding:12px 12px 24px}.card{padding:22px 18px 18px;border-radius:16px}.actions{flex-direction:column-reverse}.btn{width:100%}h1{font-size:20px}}
 </style>
 </head>
-<body><div class="card">
-<div class="head"><?php if ( $icon ) : ?><img src="<?php echo esc_url( $icon ); ?>" alt=""><?php endif; ?><h1><?php echo esc_html( $title ); ?></h1></div>
+<body><div class="shell">
+<div class="brand"><span class="mark"><?php echo self::svg( 'plug' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>WP MCP Tools</div>
+<main class="card"<?php echo 'error' === $tone ? ' role="alert"' : ''; ?>>
+<?php echo $hero; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts by the caller. ?>
+<h1><?php echo esc_html( $h1 ); ?></h1>
+<?php if ( '' !== $sub ) : ?><p class="sub"><?php echo esc_html( $sub ); ?></p><?php endif; ?>
 <?php echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built from escaped parts above. ?>
+</main>
+<p class="foot"><b><?php echo esc_html( $home ); ?></b> · <?php echo esc_html( $lock ); ?></p>
 </div></body></html>
 		<?php
 		exit;
