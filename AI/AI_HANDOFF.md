@@ -17,6 +17,8 @@ It was first installed on the Local site `mklogistics.com.sg` (`D:\localwp\mklog
   `/MIR` also deletes repo files that are not on the site, and `/XD .git` keeps the git folder. Reverse direction (after merging an update PR): `git pull`, then the same robocopy with source and destination swapped (still `/XD .git`).
 
 ## Current Status
+**v0.8.0 (2026-10-28): plugin file tools** — groups `plugin-read` / `plugin-write` (off by default), class `includes/abilities/class-plugin-files.php`, owner-approved `editable_plugins` list in Tools tab, WP MCP Tools itself protected. Tests: `tests/pluginfiles.py` (+ `tests/pluginfiles.sh`, run by `e2e.sh`): all pass in the sandbox (WP 7.1.3 + SQLite, PHP 8.3), debug.log clean. NOT verified: admin UI in a browser, real hosts with opcache/WAF. Release when the owner pushes `master` + tag `v0.8.0`.
+
 **v0.7.1 (2026-10-27): sign-in pages redesign** (approval + error pages + upload page; see README "Sign-in pages"). Tests: `tests/oauth_pages.py` (run by `e2e.sh`): all pass, debug.log empty; screenshots checked in light, dark and 390 px wide. Release when the owner pushes `master` + tag `v0.7.1`. v0.7.0 was released on 2026-10-27 (assets OK).
 **v0.7.0 (2026-10-27, released): update tracking + diagnose + manage group** (details in "Completed"). Committed locally and tagged `v0.7.0`; release when the owner pushes `master` + the tag. Zip: `wp-mcp-tools-0.7.0.zip` (built with `git archive`; this session could not write outside the repo folder, so it is in the repo folder (ignored by git, `*.zip`) — move it next to the repo at `D:\wordpress\AI\`).
 **v0.6.0 (2026-10-23): Elementor bridge** — Elementor 4.x's own MCP abilities (22 tools + 7 resources with Pro) served on the WP MCP Tools server. Committed locally; release when the owner pushes `master` + tag `v0.6.0` (sites on 0.5.0 then update themselves). Installed on thebananaleafapolocom.local (Elementor/Pro installed there but NOT active as of this commit).
@@ -111,7 +113,7 @@ None in progress. Owner: close PR #24 (its content is in v0.5.0) and the old dep
 ## Pending
 - Owner: push `master` + tag `v0.7.0` (`git push && git push origin v0.7.0`); the `release.yml` workflow attaches the zip. Then on a few sites: Plugins → Check for updates → note whether 0.7.0 arrives by itself (auto-update enabled) or needs a click; afterwards call `wpmcp-get-update-status` on each site to read `auto_update.enabled` and the `history` source. The first update from 0.6.0 shows `detected` (0.6.0 has no log code); from 0.7.0 on the source is exact.
 - benmart.com.sg: connector 403 → run `wpmcp-diagnose` (or the curl commands in the diagnose result from outside); likely a Cloudflare / host WAF / security plugin rule for `/wp-json/wp-mcp-tools/`, `/wpmcp-oauth/`, `/.well-known/`.
-- Idea: plugin file read/write group (reuse the theme-file safety code); an admin "Diagnostics" tab.
+- Idea: an admin "Diagnostics" tab; loopback check that also probes wp-admin / a chosen URL after plugin writes.
 - TODO: first `git push` from Windows; Settings → Actions → General → allow GitHub Actions to create and approve pull requests; run the update workflow once.
 - TODO: roll out 0.4.0 to the other sites (mklogistics.sg, mylivorahome.sg, lawrys.com.sg …): install the zip, then deactivate + delete the standalone MCP Adapter plugin there.
 - RISK: upstream may drop bundled-library support in a future release; the weekly e2e PR is the early warning.

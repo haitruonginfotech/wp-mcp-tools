@@ -68,6 +68,8 @@ An unauthenticated MCP request gets `401` with `WWW-Authenticate: Bearer resourc
 | menus | list-menus, get-menu, create-menu, add-menu-item, update-menu-item, delete-menu-item, assign-menu-location |
 | theme (read) | list-theme-files, read-theme-file, search-theme-files |
 | theme-write | write-theme-file, edit-theme-file, delete-theme-file, list-theme-backups, restore-theme-backup |
+| plugin-read (**off by default**) | list-editable-plugins, list-plugin-files, read-plugin-file, search-plugin-files |
+| plugin-write (**off by default**) | write-plugin-file, edit-plugin-file, delete-plugin-file, list-plugin-backups, restore-plugin-backup |
 | manage (**off by default**) | activate-plugin, deactivate-plugin, install-plugin, update-plugin, delete-plugin, switch-theme, install-theme, update-theme |
 | elementor (needs Elementor 4.x) | Elementor's own abilities, named `elementor-<name>`: get-page-structure, create-page, build-composition, manage-elements, update-page-settings, publish-document, create-preview-link, list-posts, list-assets, list-widget-schemas, get-widget-schema, list-dynamic-tags, manage-classes, reorder-classes, manage-global-variable, manage-default-styles, get-default-styles, list-components, manage-component, list-resources, read-resource; Pro: list-site-parts, manage-site-parts. Plus 7 MCP resources (`elementor://global-classes`, `elementor://global-variables`, best practices …) |
 
@@ -122,6 +124,18 @@ Styles and script: `assets/admin.css`, `assets/admin.js` (loaded only on this sc
 - Repeater / flexible values **replace** all rows; a sub field missing from a row is cleared.
 - Group values are **merged** (sub fields you omit keep their value).
 - Targets: post ID, `"option"`, `"term_5"`, `"user_1"`.
+
+## Plugin file safety (v0.8.0)
+
+Plugin code runs on every request, so this is stricter than theme files:
+
+- Both groups (`plugin-read`, `plugin-write`) are **off by default**.
+- Writes only touch plugins the owner ticks under *Tools → Editable plugins* (setting `editable_plugins`, filter `wpmcp_editable_plugins`). Reading works for any installed plugin once `plugin-read` is on.
+- **WP MCP Tools can never be written, edited or deleted** through MCP (checked by folder name and by real path, so symlink aliases do not help).
+- `realpath` containment inside `wp-content/plugins/<slug>`, symlinked files/folders refused, `..` blocked; text extensions only; `vendor/`, `node_modules/`, `.git/` and hidden files are read-only; max 2 MB per write.
+- Backup before every write/delete in `wp-content/wpmcp-backups/plugins/<slug>/` (last 20 per file); PHP lint, JSON lint; loopback check after PHP writes with automatic rollback on a fatal error; `expected_hash` conflict check.
+- The main plugin file and `uninstall.php` cannot be deleted. Needs `edit_plugins`, so `DISALLOW_FILE_EDIT` turns writes off.
+- Limit: the rollback check requests the home page only. A bug that breaks only wp-admin or one specific page is not detected; restore with `restore-plugin-backup`.
 
 ## Theme file safety
 

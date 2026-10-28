@@ -264,3 +264,9 @@
 	.wpmcp-tab { flex: 1; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) { .wpmcp *, .wpmcp *::after { animation: none !important; transition: none !important; } }
+
+.wpmcp-editable { padding: 16px 22px 20px; border-top: 1px solid var(--w-line); }
+.wpmcp-editable h3 { margin: 0 0 6px; font-size: 14px; }
+.wpmcp-editable p { margin: 0 0 12px; max-width: 70ch; }
+.wpmcp-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 16px; }
+.wpmcp-checks label { display: flex; align-items: center; gap: 8px; }

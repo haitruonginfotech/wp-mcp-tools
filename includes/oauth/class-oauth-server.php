@@ -441,7 +441,7 @@ class WPMCP_OAuth_Server {
 	}
 
 	/** Groups whose tools can change files or plugins: shown with a caution label on the approval page. */
-	const CAUTION_GROUPS = array( 'theme-write', 'manage' );
+	const CAUTION_GROUPS = array( 'theme-write', 'plugin-write', 'manage' );
 
 	private static function consent_page( array $client, WP_User $user, array $p, string $redirect_uri ): void {
 		$keep   = array( 'response_type', 'client_id', 'code_challenge', 'code_challenge_method', 'state', 'scope', 'resource' );

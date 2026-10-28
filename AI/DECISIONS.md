@@ -19,6 +19,14 @@
 - `acf_get_value('option', …)` returns empty. The id must be normalised to `options`.
 - Firing `wpmcp_register_tools` on `plugins_loaded` is too early for themes. It now runs on `after_setup_theme`.
 
+## v0.8.0 — Plugin file tools (2026-10-28)
+
+- Two new groups, `plugin-read` and `plugin-write`, both default OFF. Writes additionally need the plugin on an owner-approved list (`editable_plugins`), so turning on the group alone exposes nothing. Decision: allowlist, not "everything except self", because a compromised MCP client with edit rights on every plugin would be much worse than on one chosen plugin.
+- WP MCP Tools itself is never writable (name + realpath checks, also filtered out of the saved list).
+- Same safety design as theme files (realpath containment, backup, lint, loopback rollback, `expected_hash`); plus symlink refusal, hidden-file/vendor protection, 2 MB cap, main file undeletable. Backups live in `wpmcp-backups/plugins/<slug>/`; `WPMCP_Theme::backup_root()` is now public and reused.
+- Settings: forms that do not contain the list keep it (`editable_plugins_present` marker tells the Tools form apart).
+- Known limit: loopback checks only the front page.
+
 ## v0.7.1 — Sign-in pages redesign (2026-10-27)
 - Owner asked for nicer pages after connecting. The final "Authorization successful" page is the CLIENT's local callback page and cannot be styled; only our own pages were redesigned: `WPMCP_OAuth_Server::page()` (shared with the upload link; signature kept, new optional `$opts`), `consent_page()`, new `error_page()`. Inline CSS, no external resources, `prefers-color-scheme` dark mode. Class names/ids used by the upload flow (`.lead .muted .actions .btn .primary .err #wpmcp-files #wpmcp-submit #wpmcp-added`) are kept. Groups in `CAUTION_GROUPS` (`theme-write`, `manage`) get a caution tag on the approval page.
 

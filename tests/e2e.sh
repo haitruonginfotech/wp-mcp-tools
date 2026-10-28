@@ -79,6 +79,8 @@ PW="$(cat "$WORK/app-password.txt")"
 python3 "$PLUGIN_DIR/tests/smoke.py" "http://localhost:$PORT" admin "$PW" || STATUS=1
 # v0.7.0: new tools; the "manage" group is off by default ...
 python3 "$PLUGIN_DIR/tests/tools070.py" "http://localhost:$PORT" admin "$PW" || STATUS=1
+# v0.8.0: plugin-file groups are off by default
+python3 "$PLUGIN_DIR/tests/pluginfiles.py" "http://localhost:$PORT" admin "$PW" || STATUS=1
 # v0.7.1: OAuth approval / error pages and the upload-link page
 python3 "$PLUGIN_DIR/tests/oauth_pages.py" "http://localhost:$PORT" admin "Admin-pass-123!" "$PW" || STATUS=1
 if [ -s "$WP/debug.log" ]; then
@@ -101,4 +103,5 @@ echo "manage group on\n";
 PHP
 WPDIR="$WP" PORT="$PORT" php "$WORK/enable-manage.php"
 python3 "$PLUGIN_DIR/tests/tools070.py" "http://localhost:$PORT" admin "$PW" --manage || STATUS=1
+. "$PLUGIN_DIR/tests/pluginfiles.sh"
 exit $STATUS

@@ -30,7 +30,12 @@ class WPMCP_Settings {
 				'elementor'   => 1,
 				// Installing / updating / deleting plugins and themes: opt-in.
 				'manage'      => 0,
+				// Plugin source files: read and write are both opt-in; writes also need a ticked plugin below.
+				'plugin-read'  => 0,
+				'plugin-write' => 0,
 			),
+			// Plugin folder slugs whose files may be written through MCP (never WP MCP Tools itself).
+			'editable_plugins'      => array(),
 			// Also flag abilities as public on the MCP Adapter default server.
 			'expose_default_server' => 0,
 			// Minimum capability to reach the MCP endpoint at all (also required to approve OAuth).
@@ -88,6 +93,16 @@ class WPMCP_Settings {
 		return self::group_enabled( 'theme-write' );
 	}
 
+	/**
+	 * Plugin file writes: group on, core file editing not disabled.
+	 */
+	public static function plugin_write_allowed(): bool {
+		if ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT ) {
+			return false;
+		}
+		return self::group_enabled( 'plugin-write' );
+	}
+
 	/** MCP endpoint as clients should use it (honours the public URL override). */
 	public static function endpoint_url(): string {
 		return WPMCP_OAuth_Server::mcp_url();
@@ -104,6 +119,20 @@ class WPMCP_Settings {
 
 		foreach ( array_keys( $def['groups'] ) as $group ) {
 			$out['groups'][ $group ] = empty( $input['groups'][ $group ] ) ? 0 : 1;
+		}
+		// Editable plugins: the Tools form sends a marker so "all unticked" can be told apart from "form not shown".
+		if ( ! empty( $input['editable_plugins_present'] ) || isset( $input['editable_plugins'] ) ) {
+			$list = array();
+			foreach ( (array) ( $input['editable_plugins'] ?? array() ) as $slug ) {
+				$slug = (string) $slug;
+				if ( WPMCP_Plugin_Files::valid_slug( $slug ) && strtolower( $slug ) !== strtolower( WPMCP_Plugin_Files::self_slug() ) && 'wp-mcp-tools' !== strtolower( $slug ) ) {
+					$list[] = $slug;
+				}
+			}
+			$out['editable_plugins'] = array_values( array_unique( $list ) );
+		} else {
+			$prev                    = get_option( self::OPTION, array() );
+			$out['editable_plugins'] = is_array( $prev ) && is_array( $prev['editable_plugins'] ?? null ) ? $prev['editable_plugins'] : array();
 		}
 		$out['enabled']               = empty( $input['enabled'] ) ? 0 : 1;
 		$out['expose_default_server'] = empty( $input['expose_default_server'] ) ? 0 : 1;

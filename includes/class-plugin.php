@@ -19,6 +19,7 @@ class WPMCP_Plugin {
 		'WPMCP_Uploads',
 		'WPMCP_Menus',
 		'WPMCP_Theme',
+		'WPMCP_Plugin_Files',
 		'WPMCP_Manage',
 		'WPMCP_Diagnose',
 		'WPMCP_Elementor',

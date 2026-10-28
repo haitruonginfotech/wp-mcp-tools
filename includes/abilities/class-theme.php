@@ -440,7 +440,7 @@ class WPMCP_Theme {
 	/* Write                                                               */
 	/* ------------------------------------------------------------------ */
 
-	private static function backup_root(): string {
+	public static function backup_root(): string {
 		$dir = wp_normalize_path( WP_CONTENT_DIR ) . '/wpmcp-backups';
 		if ( ! is_dir( $dir ) ) {
 			wp_mkdir_p( $dir );

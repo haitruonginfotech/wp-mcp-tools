@@ -671,12 +671,39 @@ class WPMCP_Admin {
 		<?php
 	}
 
+	/** "Editable plugins" picker: only ticked plugins can be written through MCP (needs the Plugin files (write) group). */
+	private static function render_editable_plugins( array $s ): void {
+		$opt      = WPMCP_Settings::OPTION;
+		$selected = (array) ( $s['editable_plugins'] ?? array() );
+		$self     = strtolower( WPMCP_Plugin_Files::self_slug() );
+		?>
+		<div class="wpmcp-editable">
+			<h3>Editable plugins</h3>
+			<p>With <strong>Plugin files (write)</strong> on, MCP clients can change files only in the plugins ticked here. Every change is backed up first, PHP is syntax-checked and the site is rolled back automatically if it breaks. WP MCP Tools itself can never be edited this way.</p>
+			<input type="hidden" name="<?php echo esc_attr( $opt ); ?>[editable_plugins_present]" value="1">
+			<div class="wpmcp-checks">
+				<?php foreach ( WPMCP_Plugin_Files::installed_slugs() as $slug ) : ?>
+					<?php
+					if ( strtolower( $slug ) === $self || 'wp-mcp-tools' === strtolower( $slug ) ) {
+						continue;
+					}
+					?>
+					<label><input type="checkbox" name="<?php echo esc_attr( $opt ); ?>[editable_plugins][]" value="<?php echo esc_attr( $slug ); ?>" <?php checked( in_array( $slug, $selected, true ) ); ?>> <code><?php echo esc_html( $slug ); ?></code></label>
+				<?php endforeach; ?>
+			</div>
+		</div>
+		<?php
+	}
+
 	/** Keep group toggles when the Connection form is saved (they live on the Tools tab). */
 	private static function hidden_groups( array $s ): void {
 		foreach ( $s['groups'] as $g => $on ) {
 			if ( $on ) {
 				printf( '<input type="hidden" name="%s[groups][%s]" value="1">', esc_attr( WPMCP_Settings::OPTION ), esc_attr( $g ) );
 			}
+		}
+		foreach ( (array) ( $s['editable_plugins'] ?? array() ) as $slug ) {
+			printf( '<input type="hidden" name="%s[editable_plugins][]" value="%s">', esc_attr( WPMCP_Settings::OPTION ), esc_attr( (string) $slug ) );
 		}
 	}
 
@@ -705,6 +732,8 @@ class WPMCP_Admin {
 			'theme-write' => 'dashicons-edit-page',
 			'elementor'   => 'dashicons-layout',
 			'manage'      => 'dashicons-admin-plugins',
+			'plugin-read' => 'dashicons-media-code',
+			'plugin-write' => 'dashicons-edit',
 		);
 		return $map[ $slug ] ?? 'dashicons-admin-generic';
 	}
@@ -741,13 +770,14 @@ class WPMCP_Admin {
 								<h3><?php echo esc_html( $group['label'] ); ?> <span class="wpmcp-count"><?php echo (int) ( $counts[ $slug ] ?? 0 ); ?></span></h3>
 								<p><?php echo esc_html( $group['description'] ); ?></p>
 								<?php if ( ! $available ) : ?>
-									<p class="wpmcp-bad">Unavailable: dependency not active<?php echo 'theme-write' === $slug ? ' or DISALLOW_FILE_EDIT is set' : ''; ?>.</p>
+									<p class="wpmcp-bad">Unavailable: dependency not active<?php echo in_array( $slug, array( 'theme-write', 'plugin-write' ), true ) ? ' or DISALLOW_FILE_EDIT is set' : ''; ?>.</p>
 								<?php endif; ?>
 							</div>
 							<?php self::switch_input( WPMCP_Settings::OPTION . '[groups][' . $slug . ']', $on, $group['label'] ); ?>
 						</div>
 					<?php endforeach; ?>
 				</div>
+				<?php self::render_editable_plugins( $s ); ?>
 				<div class="wpmcp-panel__foot">
 					<span class="wpmcp-dirty-msg">You have unsaved changes.</span>
 					<button type="submit" class="wpmcp-btn wpmcp-btn--primary">Save changes</button>
