@@ -137,7 +137,7 @@ class WPMCP_Plugin {
 			WPMCP_SERVER_ID,
 			WPMCP_ROUTE_NAMESPACE,
 			WPMCP_ROUTE,
-			'WP MCP Tools — ' . get_bloginfo( 'name' ),
+			'WP MCP Tools: ' . get_bloginfo( 'name' ),
 			'Content, SCF/ACF, media, menus, options, theme-file' . ( WPMCP_Elementor::tool_ids() ? ' and Elementor' : '' ) . ' tools for ' . home_url(),
 			WPMCP_VERSION,
 			array( \WP\MCP\Transport\HttpTransport::class ),

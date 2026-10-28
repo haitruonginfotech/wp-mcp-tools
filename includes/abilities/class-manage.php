@@ -225,7 +225,7 @@ class WPMCP_Manage {
 		if ( is_wp_error( $r ) ) {
 			return $r;
 		}
-		$check = WPMCP_Theme::loopback_check();
+		$check = WPMCP_File_Ops::loopback_check();
 		if ( 'failed' === $check['status'] ) {
 			deactivate_plugins( $file, true );
 			return WPMCP_Helpers::error( 'rolled_back', 'The site returned a fatal error after activating, so the plugin was deactivated again. ' . ( $check['detail'] ?? '' ), 500 );
@@ -369,7 +369,7 @@ class WPMCP_Manage {
 			return array( 'active' => $slug, 'changed' => false );
 		}
 		switch_theme( $slug );
-		$check = WPMCP_Theme::loopback_check();
+		$check = WPMCP_File_Ops::loopback_check();
 		if ( 'failed' === $check['status'] ) {
 			switch_theme( $previous );
 			return WPMCP_Helpers::error( 'rolled_back', 'The site returned a fatal error with the new theme, so "' . $previous . '" was restored. ' . ( $check['detail'] ?? '' ), 500 );

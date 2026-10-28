@@ -104,5 +104,7 @@ PHP
 WPDIR="$WP" PORT="$PORT" php "$WORK/enable-manage.php"
 python3 "$PLUGIN_DIR/tests/tools070.py" "http://localhost:$PORT" admin "$PW" --manage || STATUS=1
 . "$PLUGIN_DIR/tests/pluginfiles.sh"
+python3 "$PLUGIN_DIR/tests/themefiles.py" "http://localhost:$PORT" admin "$PW" || STATUS=1
 . "$PLUGIN_DIR/tests/desktop.sh"
+. "$PLUGIN_DIR/tests/admin_render.sh"
 exit $STATUS

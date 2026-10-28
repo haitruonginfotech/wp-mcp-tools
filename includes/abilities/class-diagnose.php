@@ -65,7 +65,7 @@ class WPMCP_Diagnose {
 		$args = array(
 			'method'      => $method,
 			'timeout'     => 15,
-			'sslverify'   => false, // Local / self-signed sites.
+			'sslverify'   => (bool) apply_filters( 'https_local_ssl_verify', false ), // Same default as core loopback requests.
 			'redirection' => 0,
 			'headers'     => array( 'Accept' => 'application/json', 'Cache-Control' => 'no-cache' ),
 		);

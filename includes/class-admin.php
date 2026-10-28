@@ -189,13 +189,13 @@ class WPMCP_Admin {
 				'label'        => 'Claude Desktop',
 				'oauth'        => array(
 					array(
-						'title' => 'Option A — Custom connector (public HTTPS sites)',
+						'title' => 'Option A: Custom connector (public HTTPS sites)',
 						'text'  => $local_tip . '<p>Open <em>Settings → Connectors → Add custom connector</em>, enter a name and the URL below, click <em>Add</em>, then <em>Connect</em> and approve on your site.</p>',
 						'label' => 'URL',
 						'code'  => $url,
 					),
 					array(
-						'title' => 'Option B — Local bridge (works for local sites)',
+						'title' => 'Option B: Local bridge (works for local sites)',
 						'text'  => '<p><em>Settings → Developer → Edit Config</em>, add this server to <code>claude_desktop_config.json</code> and restart Claude. A browser window opens to sign in and approve. Requires Node.js.</p>',
 						'label' => 'claude_desktop_config.json',
 						'code'  => self::json( $remote_oauth ),
@@ -486,7 +486,7 @@ class WPMCP_Admin {
 				<div class="wpmcp-row wpmcp-row--stack">
 					<div class="wpmcp-row__text">
 						<h3><label for="wpmcp-public-url">Server URL</label></h3>
-						<p>The base URL AI clients use to reach this site. Leave blank to use <code><?php echo esc_html( untrailingslashit( home_url() ) ); ?></code>. Set it only behind a tunnel, proxy or staging domain — it is used for the MCP URL, the OAuth endpoints and the metadata.</p>
+						<p>The base URL AI clients use to reach this site. Leave blank to use <code><?php echo esc_html( untrailingslashit( home_url() ) ); ?></code>. Set it only behind a tunnel, proxy or staging domain: it is used for the MCP URL, the OAuth endpoints and the metadata.</p>
 					</div>
 					<div class="wpmcp-row__ctl">
 						<input type="url" id="wpmcp-public-url" class="wpmcp-input code" name="<?php echo esc_attr( $opt ); ?>[public_url]" value="<?php echo esc_attr( $s['public_url'] ); ?>" placeholder="<?php echo esc_attr( untrailingslashit( home_url() ) ); ?>">
@@ -538,7 +538,7 @@ class WPMCP_Admin {
 			<div class="wpmcp-panel__head">
 				<h2>Application password</h2>
 				<?php if ( $new_pw ) : ?>
-					<p>New password for <strong><?php echo esc_html( $user->user_login ); ?></strong> — copy it now, it is not shown again.</p>
+					<p>New password for <strong><?php echo esc_html( $user->user_login ); ?></strong>. Copy it now, it is not shown again.</p>
 				<?php else : ?>
 					<p>Create an Application Password for <strong><?php echo esc_html( $user->user_login ); ?></strong>. It is inserted into the configs below. Manage or revoke passwords in <a href="<?php echo esc_url( admin_url( 'profile.php#application-passwords-section' ) ); ?>">your profile</a>.</p>
 				<?php endif; ?>
@@ -657,7 +657,7 @@ class WPMCP_Admin {
 					<tr>
 						<td><strong><?php echo esc_html( $c['client_name'] ); ?></strong><code class="wpmcp-small"><?php echo esc_html( implode( ', ', (array) $c['redirect_uris'] ) ); ?></code></td>
 						<td><?php if ( $tokens ) : ?><span class="wpmcp-tag is-ok">Connected</span><small><?php echo (int) $tokens; ?> active token(s)</small><?php else : ?><span class="wpmcp-tag">Not signed in</span><?php endif; ?></td>
-						<td><?php echo esc_html( implode( ', ', wp_list_pluck( $users, 'user_login' ) ) ?: '—' ); ?></td>
+						<td><?php echo esc_html( implode( ', ', wp_list_pluck( $users, 'user_login' ) ) ?: '-' ); ?></td>
 						<td><?php echo esc_html( wp_date( get_option( 'date_format' ), (int) $c['created_at'] ) ); ?></td>
 						<td class="wpmcp-actions">
 							<?php if ( $tokens ) : ?>
@@ -690,7 +690,7 @@ class WPMCP_Admin {
 			</div>
 			<div class="wpmcp-row">
 				<div class="wpmcp-row__text">
-					<h3>Option A — one-click extension (.mcpb)</h3>
+					<h3>Option A: one-click extension (.mcpb)</h3>
 					<p>Download, then double-click the file (or drag it into Claude Desktop → Settings → Extensions). Claude Desktop asks for the site address, your username and an <strong>Application Password</strong>; the password is stored by Claude Desktop and is not inside the file.</p>
 				</div>
 				<div class="wpmcp-row__ctl">
@@ -699,7 +699,7 @@ class WPMCP_Admin {
 			</div>
 			<div class="wpmcp-row">
 				<div class="wpmcp-row__text">
-					<h3>Option B — config file</h3>
+					<h3>Option B: config file</h3>
 					<p>Save the helper somewhere on your computer, then add this to <code>claude_desktop_config.json</code> (Windows: <code>%APPDATA%\Claude</code>) and restart Claude Desktop. Needs Node.js 18+. Change the path in <code>args</code>.</p>
 					<?php if ( $new_pw ) : ?>
 						<p class="wpmcp-note"><span class="dashicons dashicons-warning" aria-hidden="true"></span>The new Application Password is filled in below. It is shown only once.</p>

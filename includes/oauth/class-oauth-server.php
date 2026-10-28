@@ -558,7 +558,7 @@ class WPMCP_OAuth_Server {
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<title><?php echo esc_html( $title . ' — ' . $site ); ?></title>
+<title><?php echo esc_html( $title . ' | ' . $site ); ?></title>
 <meta name="robots" content="noindex,nofollow">
 <style>
 :root{--bg:#eef3f2;--card:#fff;--ink:#14201f;--muted:#5b6b69;--line:#dbe4e2;--soft:#f4f8f7;--accent:#0f766e;--accent-ink:#fff;--accent-soft:#e3f3f0;--warn:#92400e;--warn-soft:#fef3c7;--bad:#b91c1c;--bad-soft:#fee2e2;--shadow:0 1px 2px rgba(16,40,38,.06),0 12px 32px rgba(16,40,38,.08)}
@@ -786,7 +786,7 @@ input[type=file]{width:100%;padding:14px;border:1.5px dashed var(--line);border-
 	}
 
 	/**
-	 * Filter: rest_post_dispatch — tell MCP clients where to authenticate.
+	 * Filter: rest_post_dispatch: tell MCP clients where to authenticate.
 	 *
 	 * @param WP_REST_Response $response Response.
 	 * @param WP_REST_Server   $server   Server.

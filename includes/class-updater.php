@@ -138,7 +138,7 @@ final class WPMCP_Updater {
 	}
 
 	/**
-	 * Filter: plugins_api — the "View version x.y.z details" popup.
+	 * Filter: plugins_api, the "View version x.y.z details" popup.
 	 */
 	public static function details( $result, $action, $args ) {
 		if ( 'plugin_information' !== $action || empty( $args->slug ) || dirname( self::basename() ) !== $args->slug ) {
@@ -167,7 +167,7 @@ final class WPMCP_Updater {
 	}
 
 	/**
-	 * Filter: upgrader_source_selection — keep the installed folder name if the plugin lives in a
+	 * Filter: upgrader_source_selection, keep the installed folder name if the plugin lives in a
 	 * differently named folder (e.g. "wp-mcp-tools-main"), so WordPress keeps it active after updating.
 	 */
 	public static function fix_folder( $source, $remote_source, $upgrader, $hook_extra = array() ) {

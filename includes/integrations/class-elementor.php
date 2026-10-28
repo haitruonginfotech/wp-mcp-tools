@@ -97,7 +97,7 @@ final class WPMCP_Elementor {
 		return (bool) get_option( 'elementor_mcp_enabled', false );
 	}
 
-	/** Atomic Editor (Elementor v4) is on — most builder tools need it. */
+	/** Atomic Editor (Elementor v4) is on; most builder tools need it. */
 	public static function atomic_editor_active(): ?bool {
 		if ( ! class_exists( '\Elementor\Modules\Mcp\Utils\Mcp_V4_Gate' ) ) {
 			return null;

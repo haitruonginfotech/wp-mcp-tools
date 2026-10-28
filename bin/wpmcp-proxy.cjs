@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * WP MCP Tools — stdio <-> HTTP proxy for MCP clients that only speak stdio (Claude Desktop) or that
+ * WP MCP Tools: stdio <-> HTTP proxy for MCP clients that only speak stdio (Claude Desktop) or that
  * cannot reach a local site (https://my-site.local) from the cloud.
  *
  * The client starts this file as a local subprocess. It reads JSON-RPC lines from stdin, POSTs them to the
@@ -15,7 +15,7 @@
  *   WPMCP_INSECURE_TLS    "1" = accept any certificate (hosts *.local, *.test, *.localhost, localhost, 127.0.0.1 always do).
  *   MCP_LOG_FILE      Optional path for a debug log (stderr is used otherwise, errors only).
  *
- * @version 0.9.0
+ * @version 0.9.1
  */
 'use strict';
 
@@ -24,7 +24,7 @@ const https = require('https');
 const fs = require('fs');
 const readline = require('readline');
 
-const VERSION = '0.9.0';
+const VERSION = '0.9.1';
 const UA = 'wpmcp-proxy/' + VERSION + ' (+https://github.com/haitruonginfotech/wp-mcp-tools)';
 const REST_PATH = '/wp-mcp-tools/mcp';
 

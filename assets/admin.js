@@ -1,5 +1,5 @@
 /**
- * WP MCP Tools — admin screen behaviour (no dependencies).
+ * WP MCP Tools: admin screen behaviour (no dependencies).
  * Auth-method switch · client tabs · copy buttons · unsaved-changes hint · tool search/filter · confirm links.
  */
 (function () {

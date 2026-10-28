@@ -179,3 +179,5 @@ Sandbox recipe:
 1. On mklogistics: activate, open MCP Tools → Connection, confirm 47 tools and the OAuth pill.
 2. Connect Claude Code (OAuth) or Claude Desktop via `npx mcp-remote` (Option B), approve, then call `wpmcp-get-site-info`.
 3. Check that `wpmcp-list-field-groups` with a page ID returns the theme's SCF groups.
+
+**v0.9.1 (2026-10-28): cleanup.** `WPMCP_File_Ops` now holds the shared file logic for theme and plugin tools; security hardening and wording cleanup. Full e2e: 154 checks, all pass.

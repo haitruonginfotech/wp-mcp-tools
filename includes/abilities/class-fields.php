@@ -2,7 +2,7 @@
 /**
  * Secure Custom Fields / ACF: field groups and field values.
  *
- * Value shape used by get-fields (mode=raw) and update-fields — both use field NAMES:
+ * Value shape used by get-fields (mode=raw) and update-fields; both use field NAMES:
  *   text/textarea/wysiwyg/url/select... => scalar
  *   image/file                          => attachment ID
  *   group                               => { sub_name: value }
@@ -69,7 +69,7 @@ class WPMCP_Fields {
 			'get-fields',
 			array(
 				'label'       => 'Get field values',
-				'description' => 'Read SCF/ACF values for a post/page, options page, term or user. mode=raw (default) returns name-keyed values with attachment IDs — the same shape update-fields accepts. mode=formatted returns get_field() output (image arrays, URLs...).',
+				'description' => 'Read SCF/ACF values for a post/page, options page, term or user. mode=raw (default) returns name-keyed values with attachment IDs (the same shape update-fields accepts). mode=formatted returns get_field() output (image arrays, URLs...).',
 				'properties'  => array(
 					'target' => $target,
 					'names'  => $h::s_list( 'Only these top-level field names. Default: all fields of the groups that apply.' ),
@@ -88,7 +88,7 @@ class WPMCP_Fields {
 			'update-fields',
 			array(
 				'label'       => 'Update field values',
-				'description' => 'Write SCF/ACF values: {"target": 12, "fields": {"hero_title": "Hi", "hero_image": 55, "sections": [{"acf_fc_layout": "text_block", "heading": "..."}]}}. Repeater/flexible values REPLACE all rows — read with get-fields first and send the full list back.',
+				'description' => 'Write SCF/ACF values: {"target": 12, "fields": {"hero_title": "Hi", "hero_image": 55, "sections": [{"acf_fc_layout": "text_block", "heading": "..."}]}}. Repeater/flexible values REPLACE all rows, read with get-fields first and send the full list back.',
 				'properties'  => array(
 					'target' => $target,
 					'fields' => $h::s_obj( 'Map of field name (or field key) => value.' ),

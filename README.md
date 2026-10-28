@@ -156,6 +156,10 @@ Plugin code runs on every request, so this is stricter than theme files:
 - After a PHP write, the home page is requested; on HTTP 500 / fatal error the change is rolled back automatically.
 - `DISALLOW_FILE_EDIT` disables all write tools. Writes need the `edit_themes` capability.
 
+## Code layout (v0.9.1)
+
+Theme and plugin file tools share one implementation, `includes/class-file-ops.php` (`WPMCP_File_Ops`): listing, reading, searching, hash check, lint, backups, atomic write and the loopback check with rollback. `class-theme.php` and `class-plugin-files.php` only hold their own policy (which folder is allowed, what can never be deleted) and call into it. Security hardening in this release: `X-Content-Type-Options: nosniff` on the upload route, and the diagnose loopback request now follows WordPress's `https_local_ssl_verify` filter.
+
 ## Extending
 
 ```php

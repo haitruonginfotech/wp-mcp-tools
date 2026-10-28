@@ -51,7 +51,7 @@ class WPMCP_Desktop {
 		return array(
 			'manifest_version' => '0.3',
 			'name'             => self::bundle_name( $site_url ),
-			'display_name'     => 'WP MCP Tools — ' . $host,
+			'display_name'     => 'WP MCP Tools: ' . $host,
 			'version'          => WPMCP_VERSION,
 			'description'      => 'Connect Claude Desktop to ' . $host . ' through WP MCP Tools (works for local sites such as .local / .test).',
 			'author'           => array( 'name' => 'Hai Truong IT' ),
@@ -106,6 +106,9 @@ class WPMCP_Desktop {
 		$proxy = (string) file_get_contents( self::proxy_path() ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 		if ( '' === $proxy ) {
 			return new WP_Error( 'no_proxy', 'Proxy file is missing from the plugin.' );
+		}
+		if ( ! function_exists( 'wp_tempnam' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
 		$tmp = wp_tempnam( 'wpmcp-mcpb' );
 		$zip = new ZipArchive();

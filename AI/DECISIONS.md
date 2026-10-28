@@ -92,3 +92,9 @@
 | 21 | Query-var route on `init` (not REST, not a rewrite rule) | Works with plain permalinks and needs no rewrite flush. It is also not affected by WPS Hide Login. |
 | 22 | Files are saved with `wp_set_current_user(session user)` + `media_handle_sideload` | Same capability and mime checks as a normal admin upload. The attachment author is the session creator. |
 | 23 | The chunked base64 tool is kept as a fallback | Some clients have no browser or HTTP tool. It is fine for icons and logos. |
+
+## v0.9.1 — cleanup release (2026-10-28)
+- Theme and plugin file tools were two copies of the same code; merged into `WPMCP_File_Ops` (one place to fix bugs). Policy stays in each class. Behaviour and tool names unchanged.
+- Security review: no critical findings. Hardened the upload route (`nosniff`) and the diagnose loopback (honours `https_local_ssl_verify`). Not done: rate limiting for OAuth dynamic client registration.
+- Source text tidied (plain punctuation, no decorative dashes). Fixed `wp_tempnam` missing in CLI contexts (`class-desktop.php`).
+- Tests added: `tests/themefiles.py`, `tests/admin_render.sh`.

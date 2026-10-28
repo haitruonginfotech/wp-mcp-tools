@@ -200,6 +200,7 @@ class WPMCP_Uploads {
 
 		header( 'X-Robots-Tag: noindex, nofollow' );
 		header( 'Referrer-Policy: no-referrer' );
+		header( 'X-Content-Type-Options: nosniff' );
 
 		$s = ( 64 === strlen( $token ) && WPMCP_Settings::mcp_enabled() && WPMCP_Registry::group_active( 'media' ) ) ? self::load( self::hash( $token ) ) : null;
 		if ( ! $s ) {
@@ -322,7 +323,7 @@ class WPMCP_Uploads {
 		if ( ! empty( $data['added'] ) ) {
 			$body .= '<p class="lead">Uploaded ' . count( $data['added'] ) . ' file(s):</p><ul id="wpmcp-added">';
 			foreach ( $data['added'] as $a ) {
-				$body .= '<li data-id="' . (int) $a['id'] . '">#' . (int) $a['id'] . ' — ' . esc_html( $a['filename'] ) . '</li>';
+				$body .= '<li data-id="' . (int) $a['id'] . '">#' . (int) $a['id'] . ': ' . esc_html( $a['filename'] ) . '</li>';
 			}
 			$body .= '</ul>';
 		}

@@ -24,6 +24,9 @@ class WPMCP_Plugin_Files {
 
 	const MAX_BYTES = 2097152; // 2 MB per written file.
 
+	/** Backup store inside wp-content/wpmcp-backups. */
+	const STORE = 'plugins';
+
 	/* ------------------------------------------------------------------ */
 	/* Registration                                                        */
 	/* ------------------------------------------------------------------ */
@@ -317,7 +320,7 @@ class WPMCP_Plugin_Files {
 		}
 		if ( $write ) {
 			foreach ( array_slice( $segments, 0, -1 ) as $seg ) {
-				if ( in_array( $seg, WPMCP_Theme::SKIP_DIRS, true ) ) {
+				if ( in_array( $seg, WPMCP_File_Ops::SKIP_DIRS, true ) ) {
 					return WPMCP_Helpers::error( 'protected_path', 'Files inside ' . $seg . '/ are read-only (managed by tooling, not by hand).', 403 );
 				}
 			}
@@ -364,51 +367,8 @@ class WPMCP_Plugin_Files {
 		);
 	}
 
-	private static function ext( string $path ): string {
-		return strtolower( pathinfo( $path, PATHINFO_EXTENSION ) );
-	}
-
-	private static function walk( string $base, string $sub = '', string $ext = '', int $limit = 2000 ): array {
-		$root = rtrim( $base . '/' . $sub, '/' );
-		if ( ! is_dir( $root ) ) {
-			return array();
-		}
-		$out = array();
-		$it  = new RecursiveIteratorIterator(
-			new RecursiveCallbackFilterIterator(
-				new RecursiveDirectoryIterator( $root, FilesystemIterator::SKIP_DOTS ),
-				static function ( $file ) {
-					return ! ( $file->isDir() && ( $file->isLink() || in_array( $file->getFilename(), WPMCP_Theme::SKIP_DIRS, true ) ) );
-				}
-			)
-		);
-		foreach ( $it as $file ) {
-			if ( ! $file->isFile() ) {
-				continue;
-			}
-			$abs = wp_normalize_path( $file->getPathname() );
-			if ( $ext && self::ext( $abs ) !== $ext ) {
-				continue;
-			}
-			$out[] = array(
-				'path' => ltrim( substr( $abs, strlen( $base ) ), '/' ),
-				'abs'  => $abs,
-			);
-			if ( count( $out ) >= $limit ) {
-				break;
-			}
-		}
-		usort(
-			$out,
-			static function ( $a, $b ) {
-				return strcmp( $a['path'], $b['path'] );
-			}
-		);
-		return $out;
-	}
-
 	/* ------------------------------------------------------------------ */
-	/* Read                                                                */
+	/* Tools                                                               */
 	/* ------------------------------------------------------------------ */
 
 	/** @return array */
@@ -446,24 +406,11 @@ class WPMCP_Plugin_Files {
 		if ( is_wp_error( $base ) ) {
 			return $base;
 		}
-		$sub = WPMCP_Helpers::clean_rel_path( (string) WPMCP_Helpers::arg( $input, 'dir', '' ) );
-		if ( in_array( '..', explode( '/', $sub ), true ) ) {
-			return WPMCP_Helpers::error( 'invalid_path', 'Path traversal is not allowed.', 403 );
+		$sub = WPMCP_File_Ops::sub_dir( $base[1], (string) WPMCP_Helpers::arg( $input, 'dir', '' ) );
+		if ( is_wp_error( $sub ) ) {
+			return $sub;
 		}
-		if ( '' !== $sub ) {
-			$real = realpath( $base[1] . '/' . $sub );
-			if ( ! $real || 0 !== strpos( wp_normalize_path( $real ) . '/', $base[1] . '/' ) ) {
-				return WPMCP_Helpers::error( 'invalid_path', 'Directory is outside the plugin.', 403 );
-			}
-		}
-		$files = array();
-		foreach ( self::walk( $base[1], $sub, strtolower( (string) WPMCP_Helpers::arg( $input, 'extension', '' ) ) ) as $f ) {
-			$files[] = array(
-				'path'     => $f['path'],
-				'size'     => filesize( $f['abs'] ),
-				'modified' => gmdate( 'Y-m-d H:i:s', (int) filemtime( $f['abs'] ) ),
-			);
-		}
+		$files = WPMCP_File_Ops::list_rows( $base[1], $sub, strtolower( (string) WPMCP_Helpers::arg( $input, 'extension', '' ) ) );
 		return array(
 			'plugin'   => $base[0],
 			'editable' => WPMCP_Settings::plugin_write_allowed() && self::is_editable( $base[0] ),
@@ -474,34 +421,12 @@ class WPMCP_Plugin_Files {
 
 	/** @return array|WP_Error */
 	public static function read_file( array $input ) {
-		$f = self::resolve( $input, true, false );
-		if ( is_wp_error( $f ) ) {
-			return $f;
+		$file = self::resolve( $input, true, false );
+		if ( is_wp_error( $file ) ) {
+			return $file;
 		}
-		if ( ! in_array( self::ext( $f['rel'] ), WPMCP_Theme::TEXT_EXT, true ) ) {
-			return WPMCP_Helpers::error( 'binary', 'Only text files can be read. Allowed: ' . implode( ', ', WPMCP_Theme::TEXT_EXT ) );
-		}
-		if ( filesize( $f['abs'] ) > 4 * MB_IN_BYTES ) {
-			return WPMCP_Helpers::error( 'too_large', 'File is larger than 4 MB; use search-plugin-files instead.' );
-		}
-		$content = (string) file_get_contents( $f['abs'] ); // phpcs:ignore
-		$lines   = explode( "\n", $content );
-		$total   = count( $lines );
-		$start   = max( 1, (int) WPMCP_Helpers::arg( $input, 'start_line', 1 ) );
-		$end     = min( $total, (int) WPMCP_Helpers::arg( $input, 'end_line', $total ) );
-		$partial = $start > 1 || $end < $total;
-
-		return array(
-			'plugin'     => $f['slug'],
-			'path'       => $f['rel'],
-			'size'       => strlen( $content ),
-			'lines'      => $total,
-			'hash'       => sha1( $content ),
-			'modified'   => gmdate( 'Y-m-d H:i:s', (int) filemtime( $f['abs'] ) ),
-			'start_line' => $start,
-			'end_line'   => $end,
-			'content'    => $partial ? implode( "\n", array_slice( $lines, $start - 1, $end - $start + 1 ) ) : $content,
-		);
+		$data = WPMCP_File_Ops::read( $file, $input );
+		return is_wp_error( $data ) ? $data : array( 'plugin' => $file['slug'] ) + $data;
 	}
 
 	/** @return array|WP_Error */
@@ -510,228 +435,73 @@ class WPMCP_Plugin_Files {
 		if ( is_wp_error( $base ) ) {
 			return $base;
 		}
-		$query = (string) $input['query'];
-		$regex = ! empty( $input['regex'] );
-		if ( '' === $query ) {
-			return WPMCP_Helpers::error( 'empty', 'query must not be empty.' );
-		}
-		$pattern = '';
-		if ( $regex ) {
-			$pattern = '~' . str_replace( '~', '\~', $query ) . '~u';
-			if ( false === @preg_match( $pattern, '' ) ) { // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
-				return WPMCP_Helpers::error( 'invalid_regex', 'Invalid regular expression.' );
-			}
-		}
-		$matches = array();
-		$ext     = strtolower( (string) WPMCP_Helpers::arg( $input, 'extension', '' ) );
-		foreach ( self::walk( $base[1], '', $ext ) as $f ) {
-			if ( ! in_array( self::ext( $f['path'] ), WPMCP_Theme::TEXT_EXT, true ) || filesize( $f['abs'] ) > 2 * MB_IN_BYTES ) {
-				continue;
-			}
-			foreach ( (array) file( $f['abs'], FILE_IGNORE_NEW_LINES ) as $i => $line ) {
-				$hit = $regex ? preg_match( $pattern, $line ) : ( false !== stripos( $line, $query ) );
-				if ( $hit ) {
-					$matches[] = array(
-						'path' => $f['path'],
-						'line' => $i + 1,
-						'text' => mb_substr( trim( $line ), 0, 300 ),
-					);
-					if ( count( $matches ) >= 200 ) {
-						break 2;
-					}
-				}
-			}
+		$hits = WPMCP_File_Ops::search( $base[1], (string) $input['query'], ! empty( $input['regex'] ), strtolower( (string) WPMCP_Helpers::arg( $input, 'extension', '' ) ) );
+		if ( is_wp_error( $hits ) ) {
+			return $hits;
 		}
 		return array(
 			'plugin'  => $base[0],
-			'count'   => count( $matches ),
-			'matches' => $matches,
+			'count'   => count( $hits ),
+			'matches' => $hits,
 		);
-	}
-
-	/* ------------------------------------------------------------------ */
-	/* Write                                                               */
-	/* ------------------------------------------------------------------ */
-
-	private static function backup_root( string $slug ): string {
-		$dir = WPMCP_Theme::backup_root() . '/plugins/' . $slug;
-		if ( ! is_dir( $dir ) ) {
-			wp_mkdir_p( $dir );
-		}
-		return $dir;
-	}
-
-	private static function glob_escape( string $s ): string {
-		return str_replace( array( '[', ']', '*', '?' ), array( '\[', '\]', '\*', '\?' ), $s );
-	}
-
-	/** @return string Backup id "<plugin>/<flattened>.<ts>.bak" or ''. */
-	private static function backup( array $f ): string {
-		if ( ! file_exists( $f['abs'] ) ) {
-			return '';
-		}
-		$root = self::backup_root( $f['slug'] );
-		$flat = str_replace( '/', '__', $f['rel'] );
-		$name = $flat . '.' . gmdate( 'Ymd-His' ) . '-' . substr( uniqid(), -4 ) . '.bak';
-		copy( $f['abs'], $root . '/' . $name );
-
-		$all = glob( $root . '/' . self::glob_escape( $flat ) . '.*.bak' );
-		if ( $all && count( $all ) > WPMCP_Theme::KEEP_BACKUPS_PER_FILE ) {
-			sort( $all );
-			foreach ( array_slice( $all, 0, count( $all ) - WPMCP_Theme::KEEP_BACKUPS_PER_FILE ) as $old ) {
-				wp_delete_file( $old );
-			}
-		}
-		return $f['slug'] . '/' . $name;
-	}
-
-	/** @return true|WP_Error */
-	private static function lint( string $rel, string $content ) {
-		$ext = self::ext( $rel );
-		if ( 'php' === $ext ) {
-			return WPMCP_Helpers::php_lint( $content );
-		}
-		if ( 'json' === $ext ) {
-			return WPMCP_Helpers::json_lint( $content );
-		}
-		return true;
-	}
-
-	/** @return array|WP_Error */
-	private static function commit( array $f, string $content, bool $verify ) {
-		if ( ! in_array( self::ext( $f['rel'] ), WPMCP_Theme::TEXT_EXT, true ) ) {
-			return WPMCP_Helpers::error( 'ext_not_allowed', 'Extension not allowed. Allowed: ' . implode( ', ', WPMCP_Theme::TEXT_EXT ), 403 );
-		}
-		if ( strlen( $content ) > self::MAX_BYTES ) {
-			return WPMCP_Helpers::error( 'too_large', 'Content is larger than 2 MB.', 413 );
-		}
-		$lint = self::lint( $f['rel'], $content );
-		if ( is_wp_error( $lint ) ) {
-			return $lint;
-		}
-
-		$had_file = file_exists( $f['abs'] );
-		$backup   = self::backup( $f );
-
-		if ( ! is_dir( dirname( $f['abs'] ) ) && ! wp_mkdir_p( dirname( $f['abs'] ) ) ) {
-			return WPMCP_Helpers::error( 'mkdir_failed', 'Could not create directory.', 500 );
-		}
-		$tmp = $f['abs'] . '.wpmcp-tmp';
-		if ( false === file_put_contents( $tmp, $content ) ) { // phpcs:ignore
-			return WPMCP_Helpers::error( 'write_failed', 'Could not write file (permissions?).', 500 );
-		}
-		if ( $had_file ) {
-			@chmod( $tmp, fileperms( $f['abs'] ) & 0777 ); // phpcs:ignore
-		}
-		if ( ! rename( $tmp, $f['abs'] ) ) { // phpcs:ignore
-			wp_delete_file( $tmp );
-			return WPMCP_Helpers::error( 'write_failed', 'Could not replace file.', 500 );
-		}
-		if ( function_exists( 'opcache_invalidate' ) ) {
-			opcache_invalidate( $f['abs'], true );
-		}
-
-		$result = array(
-			'plugin'  => $f['slug'],
-			'path'    => $f['rel'],
-			'created' => ! $had_file,
-			'size'    => strlen( $content ),
-			'hash'    => sha1( $content ),
-			'backup'  => $backup,
-		);
-
-		if ( $verify && 'php' === self::ext( $f['rel'] ) ) {
-			$check           = WPMCP_Theme::loopback_check();
-			$result['check'] = $check;
-			if ( 'failed' === $check['status'] ) {
-				if ( $had_file && $backup ) {
-					copy( WPMCP_Theme::backup_root() . '/plugins/' . $backup, $f['abs'] );
-				} else {
-					wp_delete_file( $f['abs'] );
-				}
-				if ( function_exists( 'opcache_invalidate' ) ) {
-					opcache_invalidate( $f['abs'], true );
-				}
-				return WPMCP_Helpers::error( 'rolled_back', 'The site returned a fatal error after the change, so it was rolled back. ' . $check['detail'], 500 );
-			}
-		}
-		return $result;
 	}
 
 	/** @return array|WP_Error */
 	public static function write_file( array $input ) {
-		$f = self::resolve( $input, false, true );
-		if ( is_wp_error( $f ) ) {
-			return $f;
+		$file = self::resolve( $input, false, true );
+		if ( is_wp_error( $file ) ) {
+			return $file;
 		}
-		if ( $f['exists'] && ! empty( $input['expected_hash'] ) ) {
-			$current = sha1( (string) file_get_contents( $f['abs'] ) ); // phpcs:ignore
-			if ( ! hash_equals( $current, (string) $input['expected_hash'] ) ) {
-				return WPMCP_Helpers::error( 'conflict', 'File changed since it was read (hash mismatch). Read it again first.', 409 );
-			}
+		$ok = WPMCP_File_Ops::check_hash( $file, (string) WPMCP_Helpers::arg( $input, 'expected_hash', '' ) );
+		if ( is_wp_error( $ok ) ) {
+			return $ok;
 		}
-		return self::commit( $f, (string) $input['content'], (bool) WPMCP_Helpers::arg( $input, 'verify', true ) );
+		return WPMCP_File_Ops::commit( $file, (string) $input['content'], (bool) WPMCP_Helpers::arg( $input, 'verify', true ), self::STORE, 'plugin', self::MAX_BYTES );
 	}
 
 	/** @return array|WP_Error */
 	public static function edit_file( array $input ) {
-		$f = self::resolve( $input, true, true );
-		if ( is_wp_error( $f ) ) {
-			return $f;
+		$file = self::resolve( $input, true, true );
+		if ( is_wp_error( $file ) ) {
+			return $file;
 		}
-		$old = (string) $input['old_string'];
-		$new = (string) $input['new_string'];
-		if ( '' === $old ) {
-			return WPMCP_Helpers::error( 'empty', 'old_string must not be empty.' );
+		$edit = WPMCP_File_Ops::replace( (string) file_get_contents( $file['abs'] ), (string) $input['old_string'], (string) $input['new_string'], ! empty( $input['all'] ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		if ( is_wp_error( $edit ) ) {
+			return $edit;
 		}
-		$content = (string) file_get_contents( $f['abs'] ); // phpcs:ignore
-		if ( false === strpos( $content, $old ) && false !== strpos( $content, "\r\n" ) ) {
-			$old = str_replace( "\n", "\r\n", str_replace( "\r\n", "\n", $old ) );
-			$new = str_replace( "\n", "\r\n", str_replace( "\r\n", "\n", $new ) );
-		}
-		$count = substr_count( $content, $old );
-		if ( 0 === $count ) {
-			return WPMCP_Helpers::error( 'not_found', 'old_string not found in file. Read the file again and copy the exact text.', 404 );
-		}
-		$all = ! empty( $input['all'] );
-		if ( $count > 1 && ! $all ) {
-			return WPMCP_Helpers::error( 'ambiguous', sprintf( 'old_string found %d times; add more context or set all=true.', $count ) );
-		}
-		$updated = $all ? str_replace( $old, $new, $content ) : substr_replace( $content, $new, strpos( $content, $old ), strlen( $old ) );
-
-		$result = self::commit( $f, $updated, (bool) WPMCP_Helpers::arg( $input, 'verify', true ) );
+		$result = WPMCP_File_Ops::commit( $file, $edit[0], (bool) WPMCP_Helpers::arg( $input, 'verify', true ), self::STORE, 'plugin', self::MAX_BYTES );
 		if ( is_array( $result ) ) {
-			$result['replacements'] = $all ? $count : 1;
+			$result['replacements'] = $edit[1];
 		}
 		return $result;
 	}
 
-	/** True when a root-level PHP file carries the "Plugin Name:" header. */
-	private static function is_main_file( array $f ): bool {
-		if ( false !== strpos( $f['rel'], '/' ) || 'php' !== self::ext( $f['rel'] ) ) {
+	/** True for the root-level PHP file that carries the "Plugin Name:" header. */
+	private static function is_main_file( array $file ): bool {
+		if ( false !== strpos( $file['rel'], '/' ) || 'php' !== WPMCP_File_Ops::ext( $file['rel'] ) ) {
 			return false;
 		}
-		$head = (string) file_get_contents( $f['abs'], false, null, 0, 8192 ); // phpcs:ignore
+		$head = (string) file_get_contents( $file['abs'], false, null, 0, 8192 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 		return (bool) preg_match( '/^[ \t\/*#@]*Plugin Name:/mi', $head );
 	}
 
 	/** @return array|WP_Error */
 	public static function delete_file( array $input ) {
-		$f = self::resolve( $input, true, true );
-		if ( is_wp_error( $f ) ) {
-			return $f;
+		$file = self::resolve( $input, true, true );
+		if ( is_wp_error( $file ) ) {
+			return $file;
 		}
-		if ( self::is_main_file( $f ) || 'uninstall.php' === $f['rel'] ) {
-			return WPMCP_Helpers::error( 'protected_file', $f['rel'] . ' cannot be deleted (main plugin file / uninstall handler).', 403 );
+		if ( self::is_main_file( $file ) || 'uninstall.php' === $file['rel'] ) {
+			return WPMCP_Helpers::error( 'protected_file', $file['rel'] . ' cannot be deleted (main plugin file / uninstall handler).', 403 );
 		}
-		$backup = self::backup( $f );
-		wp_delete_file( $f['abs'] );
-		if ( file_exists( $f['abs'] ) ) {
+		$backup = WPMCP_File_Ops::backup( $file, self::STORE );
+		wp_delete_file( $file['abs'] );
+		if ( file_exists( $file['abs'] ) ) {
 			return WPMCP_Helpers::error( 'delete_failed', 'Could not delete file.', 500 );
 		}
 		return array(
-			'plugin'  => $f['slug'],
-			'path'    => $f['rel'],
+			'plugin'  => $file['slug'],
+			'path'    => $file['rel'],
 			'deleted' => true,
 			'backup'  => $backup,
 		);
@@ -743,63 +513,37 @@ class WPMCP_Plugin_Files {
 		if ( is_wp_error( $base ) ) {
 			return $base;
 		}
-		$root = WPMCP_Theme::backup_root() . '/plugins/' . $base[0];
-		$flat = '';
-		if ( ! empty( $input['path'] ) ) {
-			$flat = str_replace( '/', '__', WPMCP_Helpers::clean_rel_path( (string) $input['path'] ) );
-		}
-		$files = is_dir( $root ) ? (array) glob( $root . '/' . ( $flat ? self::glob_escape( $flat ) . '.' : '' ) . '*.bak' ) : array();
-		rsort( $files );
-		$out = array();
-		foreach ( array_slice( $files, 0, 200 ) as $file ) {
-			$name = basename( $file );
-			if ( ! preg_match( '/^(.+)\.(\d{8}-\d{6})-[a-z0-9]{4}\.bak$/', $name, $m ) ) {
-				continue;
-			}
-			$out[] = array(
-				'backup' => $base[0] . '/' . $name,
-				'path'   => str_replace( '__', '/', $m[1] ),
-				'time'   => DateTime::createFromFormat( 'Ymd-His', $m[2], new DateTimeZone( 'UTC' ) )->format( 'Y-m-d H:i:s' ) . ' UTC',
-				'size'   => filesize( $file ),
-			);
-		}
-		usort(
-			$out,
-			static function ( $a, $b ) {
-				return strcmp( $b['time'], $a['time'] );
-			}
-		);
 		return array(
 			'plugin'  => $base[0],
-			'backups' => $out,
+			'backups' => WPMCP_File_Ops::list_backups( self::STORE, $base[0], (string) WPMCP_Helpers::arg( $input, 'path', '' ) ),
 		);
 	}
 
 	/** @return array|WP_Error */
 	public static function restore_backup( array $input ) {
-		$id = WPMCP_Helpers::clean_rel_path( (string) $input['backup'] );
-		if ( ! preg_match( '~^([A-Za-z0-9][A-Za-z0-9._-]*)/(.+)\.\d{8}-\d{6}-[a-z0-9]{4}\.bak$~', $id, $m ) || false !== strpos( $id, '..' ) ) {
-			return WPMCP_Helpers::error( 'invalid_backup', 'Invalid backup id.' );
+		$parts = WPMCP_File_Ops::parse_backup_id( (string) $input['backup'] );
+		if ( is_wp_error( $parts ) ) {
+			return $parts;
 		}
-		$file = WPMCP_Theme::backup_root() . '/plugins/' . $id;
-		if ( ! file_exists( $file ) ) {
+		$source = WPMCP_File_Ops::backup_path( self::STORE, WPMCP_Helpers::clean_rel_path( (string) $input['backup'] ) );
+		if ( ! file_exists( $source ) ) {
 			return WPMCP_Helpers::error( 'not_found', 'Backup not found.', 404 );
 		}
-		// Goes through the same policy as a normal write (editable list, self-protection).
-		$f = self::resolve(
+		// Same rules as a normal write: editable list and self-protection apply.
+		$file = self::resolve(
 			array(
-				'plugin' => $m[1],
-				'path'   => str_replace( '__', '/', $m[2] ),
+				'plugin' => $parts[0],
+				'path'   => $parts[1],
 			),
 			false,
 			true
 		);
-		if ( is_wp_error( $f ) ) {
-			return $f;
+		if ( is_wp_error( $file ) ) {
+			return $file;
 		}
-		$result = self::commit( $f, (string) file_get_contents( $file ), true ); // phpcs:ignore
+		$result = WPMCP_File_Ops::commit( $file, (string) file_get_contents( $source ), true, self::STORE, 'plugin', self::MAX_BYTES ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 		if ( is_array( $result ) ) {
-			$result['restored_from'] = $id;
+			$result['restored_from'] = (string) $input['backup'];
 		}
 		return $result;
 	}
