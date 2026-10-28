@@ -19,6 +19,18 @@
 - `acf_get_value('option', …)` returns empty. The id must be normalised to `options`.
 - Firing `wpmcp_register_tools` on `plugins_loaded` is too early for themes. It now runs on `after_setup_theme`.
 
+## Versioning and how to go back (owner's rule, 2026-10-28)
+
+- Small change/fix: patch (0.8.1). Bigger feature: minor (0.9.0). Big milestone: major (1.0.0).
+- Every release is a git tag (`v0.7.0`, `v0.7.1`, `v0.8.0`, `v0.9.0` …) plus a zip in `D:\wordpress\AI\`. To return to a version: `git checkout v0.8.0` (look), or `git revert <commit>` / `git checkout v0.8.0 -- <path>` (take a file back), or install the old zip.
+- Features are kept removable: one class + one file each (e.g. `class-plugin-files.php`, `class-desktop.php` + `bin/wpmcp-proxy.cjs`).
+
+## v0.9.0 — Claude Desktop / local sites (2026-10-28)
+
+- Studied `AI/elementor-mcp-3.20.0` (emcp-tools, GPL, kept untracked/ignored for study only): it solves local sites with a local stdio proxy (npm package + `.mcpb` bundle that bakes the Application Password in). We copied the idea, not the code.
+- Differences: password is NOT baked into the bundle (`user_config` with `sensitive`), proxy is plain CommonJS shipped inside the plugin (no npm publish needed), sends `MCP-Protocol-Version` after the handshake (the adapter returns 400 without it), never answers notifications.
+- Not done: multi-site registry inside the proxy (use one config entry per site); npm package.
+
 ## v0.8.0 — Plugin file tools (2026-10-28)
 
 - Two new groups, `plugin-read` and `plugin-write`, both default OFF. Writes additionally need the plugin on an owner-approved list (`editable_plugins`), so turning on the group alone exposes nothing. Decision: allowlist, not "everything except self", because a compromised MCP client with edit rights on every plugin would be much worse than on one chosen plugin.

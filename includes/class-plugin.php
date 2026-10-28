@@ -64,6 +64,7 @@ class WPMCP_Plugin {
 
 		if ( is_admin() ) {
 			WPMCP_Admin::init();
+			WPMCP_Desktop::init();
 			add_action( 'admin_notices', array( __CLASS__, 'notice_no_adapter' ) );
 		}
 	}

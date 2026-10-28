@@ -1,3 +1,6 @@
 *.zip
 .DS_Store
 Thumbs.db
+
+# third-party reference plugins kept in AI/ for study only
+/AI/elementor-mcp-*/

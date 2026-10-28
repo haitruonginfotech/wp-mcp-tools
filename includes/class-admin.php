@@ -451,6 +451,8 @@ class WPMCP_Admin {
 			<?php self::copy_block( 'Endpoint', $url, true ); ?>
 		</section>
 
+		<?php self::render_desktop( $url, $user->user_login, $new_pw ? (string) $new_pw : '' ); ?>
+
 		<form method="post" action="options.php" id="wpmcp-settings">
 			<?php settings_fields( 'wpmcp' ); ?>
 			<?php self::hidden_groups( $s ); ?>
@@ -668,6 +670,51 @@ class WPMCP_Admin {
 				</tbody>
 			</table>
 		</div>
+		<?php
+	}
+
+	/** Claude Desktop / local sites: proxy file + one-click .mcpb bundle + config snippet (class-desktop.php). */
+	private static function render_desktop( string $url, string $username, string $new_pw ): void {
+		$local = WPMCP_Desktop::is_local_site( $url );
+		?>
+		<section class="wpmcp-panel" id="claude-desktop">
+			<div class="wpmcp-panel__head">
+				<h2>Claude Desktop<?php echo $local ? ' · local site' : ''; ?></h2>
+				<p>
+					<?php if ( $local ) : ?>
+						This site (<code><?php echo esc_html( (string) wp_parse_url( $url, PHP_URL_HOST ) ); ?></code>) cannot be reached from the internet, so a cloud connector will not work. Claude Desktop can run a small local helper instead; it talks to this site directly from your computer (self-signed HTTPS certificates of .local/.test sites are accepted).
+					<?php else : ?>
+						Optional: connect Claude Desktop through a local helper instead of a cloud connector. Needed for sites behind a firewall or on localhost.
+					<?php endif; ?>
+				</p>
+			</div>
+			<div class="wpmcp-row">
+				<div class="wpmcp-row__text">
+					<h3>Option A — one-click extension (.mcpb)</h3>
+					<p>Download, then double-click the file (or drag it into Claude Desktop → Settings → Extensions). Claude Desktop asks for the site address, your username and an <strong>Application Password</strong>; the password is stored by Claude Desktop and is not inside the file.</p>
+				</div>
+				<div class="wpmcp-row__ctl">
+					<a class="wpmcp-btn wpmcp-btn--primary" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=wpmcp_download_mcpb' ), 'wpmcp_download_mcpb' ) ); ?>">Download .mcpb</a>
+				</div>
+			</div>
+			<div class="wpmcp-row">
+				<div class="wpmcp-row__text">
+					<h3>Option B — config file</h3>
+					<p>Save the helper somewhere on your computer, then add this to <code>claude_desktop_config.json</code> (Windows: <code>%APPDATA%\Claude</code>) and restart Claude Desktop. Needs Node.js 18+. Change the path in <code>args</code>.</p>
+					<?php if ( $new_pw ) : ?>
+						<p class="wpmcp-note"><span class="dashicons dashicons-warning" aria-hidden="true"></span>The new Application Password is filled in below. It is shown only once.</p>
+					<?php else : ?>
+						<p>Create an Application Password in the section below ("Application Password" client tab) or under Users → Profile.</p>
+					<?php endif; ?>
+				</div>
+				<div class="wpmcp-row__ctl">
+					<a class="wpmcp-btn" href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=wpmcp_download_proxy' ), 'wpmcp_download_proxy' ) ); ?>">Download wpmcp-proxy.cjs</a>
+				</div>
+			</div>
+			<div class="wpmcp-panel__body">
+				<?php self::copy_block( 'claude_desktop_config.json', WPMCP_Desktop::config_snippet( home_url(), $username, $new_pw ) ); ?>
+			</div>
+		</section>
 		<?php
 	}
 

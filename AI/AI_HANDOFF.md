@@ -17,6 +17,8 @@ It was first installed on the Local site `mklogistics.com.sg` (`D:\localwp\mklog
   `/MIR` also deletes repo files that are not on the site, and `/XD .git` keeps the git folder. Reverse direction (after merging an update PR): `git pull`, then the same robocopy with source and destination swapped (still `/XD .git`).
 
 ## Current Status
+**v0.9.0 (2026-10-28): Claude Desktop / local sites** — `bin/wpmcp-proxy.cjs` (stdio↔HTTP proxy), `includes/class-desktop.php` (.mcpb builder, downloads, config snippet), admin panel "Claude Desktop" in the Connection tab. Tests: `tests/proxy.py`, `tests/proxy_tls.js`, `tests/desktop.sh` (run by `e2e.sh`): all pass (116 checks). UNVERIFIED: real Claude Desktop installing the `.mcpb`; browser look of the new panel. Versioning rule and rollback: see DECISIONS.md.
+
 **v0.8.0 (2026-10-28): plugin file tools** — groups `plugin-read` / `plugin-write` (off by default), class `includes/abilities/class-plugin-files.php`, owner-approved `editable_plugins` list in Tools tab, WP MCP Tools itself protected. Tests: `tests/pluginfiles.py` (+ `tests/pluginfiles.sh`, run by `e2e.sh`): all pass in the sandbox (WP 7.1.3 + SQLite, PHP 8.3), debug.log clean. NOT verified: admin UI in a browser, real hosts with opcache/WAF. Release when the owner pushes `master` + tag `v0.8.0`.
 
 **v0.7.1 (2026-10-27): sign-in pages redesign** (approval + error pages + upload page; see README "Sign-in pages"). Tests: `tests/oauth_pages.py` (run by `e2e.sh`): all pass, debug.log empty; screenshots checked in light, dark and 390 px wide. Release when the owner pushes `master` + tag `v0.7.1`. v0.7.0 was released on 2026-10-27 (assets OK).

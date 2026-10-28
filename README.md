@@ -125,6 +125,16 @@ Styles and script: `assets/admin.css`, `assets/admin.js` (loaded only on this sc
 - Group values are **merged** (sub fields you omit keep their value).
 - Targets: post ID, `"option"`, `"term_5"`, `"user_1"`.
 
+## Claude Desktop & local sites (v0.9.0)
+
+Cloud connectors (claude.ai) cannot reach `https://my-site.local`. Claude Desktop can instead start a small **local proxy** (`bin/wpmcp-proxy.cjs`, Node 18+, no dependencies) that forwards stdio to the site's MCP endpoint with Basic auth. In *Settings → WP MCP Tools → Connection → Claude Desktop*:
+
+- **Option A: one-click `.mcpb` extension.** Download, double-click. Claude Desktop asks for the site address, username and Application Password (stored by Claude Desktop; the password is **not** inside the file).
+- **Option B: config file.** Download `wpmcp-proxy.cjs`, then paste the generated JSON into `claude_desktop_config.json` and fix the path.
+- The proxy accepts self-signed HTTPS for `*.local`, `*.test`, `*.localhost`, `localhost`, `127.0.0.1` (others stay verified unless `WPMCP_INSECURE_TLS=1`), detects pretty/plain permalinks, reuses the MCP session, parses SSE replies and re-initializes if the session expires.
+- Env: `WP_URL`, `WP_USERNAME`, `WP_APP_PASSWORD`, optional `MCP_PROTOCOL_VERSION`, `WPMCP_INSECURE_TLS`, `MCP_LOG_FILE`.
+- Unverified: installing the `.mcpb` in a real Claude Desktop (manifest uses `user_config` per MCPB 0.3).
+
 ## Plugin file safety (v0.8.0)
 
 Plugin code runs on every request, so this is stricter than theme files:
