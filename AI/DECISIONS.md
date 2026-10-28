@@ -98,3 +98,6 @@
 - Security review: no critical findings. Hardened the upload route (`nosniff`) and the diagnose loopback (honours `https_local_ssl_verify`). Not done: rate limiting for OAuth dynamic client registration.
 - Source text tidied (plain punctuation, no decorative dashes). Fixed `wp_tempnam` missing in CLI contexts (`class-desktop.php`).
 - Tests added: `tests/themefiles.py`, `tests/admin_render.sh`.
+
+## v0.9.2 (2026-10-28)
+- Fix: link-style buttons (e.g. "Download .mcpb") showed teal text on a teal background because `.wpmcp a` out-ranked `.wpmcp-btn--primary`. CSS only.
