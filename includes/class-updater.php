@@ -33,6 +33,7 @@ final class WPMCP_Updater {
 		add_filter( 'plugins_api', array( __CLASS__, 'details' ), 10, 3 );
 		add_filter( 'upgrader_source_selection', array( __CLASS__, 'fix_folder' ), 10, 4 );
 		add_action( 'upgrader_process_complete', array( __CLASS__, 'flush' ), 10, 0 );
+		add_action( 'load-plugins.php', array( __CLASS__, 'ensure_checked' ), 1 );
 	}
 
 	public static function repo(): string {
@@ -46,6 +47,32 @@ final class WPMCP_Updater {
 
 	public static function flush(): void {
 		delete_site_transient( self::CACHE_KEY );
+	}
+
+	/**
+	 * Uploading or updating any plugin makes WordPress drop its update cache, so this plugin is missing
+	 * from the update list (no "Update now", no auto-update toggle) until the next scheduled check, up to
+	 * 12 hours later. When the Plugins screen opens and we are missing, ask again, at most once an hour.
+	 */
+	public static function ensure_checked(): void {
+		$current = get_site_transient( 'update_plugins' );
+		$file    = self::basename();
+		if ( is_object( $current ) && ( isset( $current->response[ $file ] ) || isset( $current->no_update[ $file ] ) ) ) {
+			return;
+		}
+		if ( get_site_transient( 'wpmcp_recheck' ) ) {
+			return;
+		}
+		set_site_transient( 'wpmcp_recheck', 1, HOUR_IN_SECONDS );
+		self::flush();
+		if ( is_object( $current ) ) {
+			$current->last_checked = 0; // Bypass WordPress' own throttle for this one run.
+			set_site_transient( 'update_plugins', $current );
+		}
+		if ( ! function_exists( 'wp_update_plugins' ) ) {
+			require_once ABSPATH . 'wp-includes/update.php';
+		}
+		wp_update_plugins();
 	}
 
 	/**

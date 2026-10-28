@@ -107,4 +107,5 @@ python3 "$PLUGIN_DIR/tests/tools070.py" "http://localhost:$PORT" admin "$PW" --m
 python3 "$PLUGIN_DIR/tests/themefiles.py" "http://localhost:$PORT" admin "$PW" || STATUS=1
 . "$PLUGIN_DIR/tests/desktop.sh"
 . "$PLUGIN_DIR/tests/admin_render.sh"
+. "$PLUGIN_DIR/tests/updater.sh"
 exit $STATUS

@@ -104,3 +104,6 @@
 
 ## v0.9.3 (2026-10-28)
 - Claude Desktop panel moved below "Connect your AI client" in the Connection tab. It is an optional add-on; to drop it remove the render_desktop() call and class-desktop.php.
+
+## v0.9.4 (2026-10-28)
+- Fix: after a manual zip upload or any plugin update, WordPress drops its update cache, so the plugin vanished from the update list (no Update now, no auto-update toggle) for up to 12 h. The updater code itself was unchanged since 0.7.0. Now opening the Plugins screen re-checks when we are missing (at most once an hour). Test: tests/updater.sh.
