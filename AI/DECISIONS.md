@@ -101,3 +101,6 @@
 
 ## v0.9.2 (2026-10-28)
 - Fix: link-style buttons (e.g. "Download .mcpb") showed teal text on a teal background because `.wpmcp a` out-ranked `.wpmcp-btn--primary`. CSS only.
+
+## v0.9.3 (2026-10-28)
+- Claude Desktop panel moved below "Connect your AI client" in the Connection tab. It is an optional add-on; to drop it remove the render_desktop() call and class-desktop.php.

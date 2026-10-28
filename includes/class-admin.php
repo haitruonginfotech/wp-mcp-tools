@@ -451,8 +451,6 @@ class WPMCP_Admin {
 			<?php self::copy_block( 'Endpoint', $url, true ); ?>
 		</section>
 
-		<?php self::render_desktop( $url, $user->user_login, $new_pw ? (string) $new_pw : '' ); ?>
-
 		<form method="post" action="options.php" id="wpmcp-settings">
 			<?php settings_fields( 'wpmcp' ); ?>
 			<?php self::hidden_groups( $s ); ?>
@@ -598,6 +596,9 @@ class WPMCP_Admin {
 				<?php $first = false; endforeach; ?>
 			</div>
 		</section>
+
+		<?php /* Optional add-on (v0.9.0). To drop it: remove this line, render_desktop() and includes/class-desktop.php. */ ?>
+		<?php self::render_desktop( $url, $user->user_login, $new_pw ? (string) $new_pw : '' ); ?>
 
 		<details class="wpmcp-panel wpmcp-details">
 			<summary><span class="dashicons dashicons-code-standards" aria-hidden="true"></span>OAuth endpoints (for debugging)</summary>
