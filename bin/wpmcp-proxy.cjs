@@ -15,7 +15,7 @@
  *   WPMCP_INSECURE_TLS    "1" = accept any certificate (hosts *.local, *.test, *.localhost, localhost, 127.0.0.1 always do).
  *   MCP_LOG_FILE      Optional path for a debug log (stderr is used otherwise, errors only).
  *
- * @version 0.10.3
+ * @version 0.10.4
  */
 'use strict';
 
@@ -24,7 +24,7 @@ const https = require('https');
 const fs = require('fs');
 const readline = require('readline');
 
-const VERSION = '0.10.3';
+const VERSION = '0.10.4';
 const UA = 'wpmcp-proxy/' + VERSION + ' (+https://github.com/haitruonginfotech/wp-mcp-tools)';
 const REST_PATH = '/wp-mcp-tools/mcp';
 
@@ -54,6 +54,9 @@ function configure(env) {
   const host = parsed.hostname.toLowerCase();
   const isLocal = String(env.WPMCP_INSECURE_TLS || '') === '1'
     || /\.(test|local|localhost|invalid)$/.test(host) || host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1';
+  if (parsed.protocol === 'http:' && !isLocal) {
+    throw new Error('WP_URL uses plain http:// for a remote host; the Application Password would be sent unencrypted. Use https://.');
+  }
   const base = parsed.origin + parsed.pathname.replace(/\/+$/, '');
   return { base, parsed, isLocal, auth: 'Basic ' + Buffer.from(user + ':' + pass).toString('base64') };
 }

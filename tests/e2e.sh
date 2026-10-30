@@ -113,4 +113,5 @@ python3 "$PLUGIN_DIR/tests/themefiles.py" "http://localhost:$PORT" admin "$PW" |
 . "$PLUGIN_DIR/tests/hitlog.sh"
 . "$PLUGIN_DIR/tests/bearer_scope.sh"
 . "$PLUGIN_DIR/tests/permissions.sh"
+. "$PLUGIN_DIR/tests/hardening.sh"
 exit $STATUS

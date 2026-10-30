@@ -278,7 +278,13 @@ class WPMCP_OAuth_Server {
 		if ( ! $uris ) {
 			self::oauth_error( 'invalid_redirect_uri', 'redirect_uris is required.' );
 		}
+		if ( count( $uris ) > 5 ) {
+			self::oauth_error( 'invalid_redirect_uri', 'At most 5 redirect URIs are accepted.' );
+		}
 		foreach ( $uris as $uri ) {
+			if ( strlen( $uri ) > 512 ) {
+				self::oauth_error( 'invalid_redirect_uri', 'A redirect URI is longer than 512 characters.' );
+			}
 			if ( ! self::valid_redirect_uri( $uri ) ) {
 				self::oauth_error( 'invalid_redirect_uri', 'Invalid redirect URI: ' . $uri . ' (https, or http on localhost only).' );
 			}
@@ -476,7 +482,6 @@ class WPMCP_OAuth_Server {
 
 		$app   = (string) $client['client_name'];
 		$site  = (string) get_bloginfo( 'name' );
-		$host  = (string) wp_parse_url( $redirect_uri, PHP_URL_HOST );
 		$roles = (array) $user->roles;
 		$role  = $roles ? ucfirst( (string) reset( $roles ) ) : '';
 		$init  = static function ( string $name ): string {
@@ -491,7 +496,7 @@ class WPMCP_OAuth_Server {
 		$body  = '<div class="who"><span class="avatar">' . esc_html( $init( $user->display_name ?: $user->user_login ) ) . '</span><div><strong>' . esc_html( $user->display_name ?: $user->user_login ) . '</strong><span>' . esc_html( $user->user_login . ( $role ? ' · ' . $role : '' ) ) . '</span></div><span class="badge">Signed in</span></div>';
 		$body .= '<h2 class="sec">It will be able to</h2><ul class="perms">' . $perms . '</ul>';
 		$body .= '<p class="muted small">Everything runs with <strong>your</strong> WordPress permissions. You can sign the app out at any time in <em>MCP Tools → Connection</em>.</p>';
-		$body .= '<div class="note">' . self::svg( 'info' ) . '<p>After you approve, you are sent back to <code>' . esc_html( $host ?: $redirect_uri ) . '</code>. Only approve apps you started connecting yourself.</p></div>';
+		$body .= '<div class="note">' . self::svg( 'info' ) . '<p>After you approve, you are sent back to <code>' . esc_html( $redirect_uri ) . '</code>. The app name above was chosen by the app itself and is not verified. Only approve apps you started connecting yourself.</p></div>';
 		$body .= '<form method="post" action="' . esc_url( self::endpoint( 'authorize' ) ) . '">' . $hidden;
 		$body .= '<div class="actions"><button type="submit" name="wpmcp_decision" value="deny" class="btn">Deny</button><button type="submit" name="wpmcp_decision" value="approve" class="btn primary">Approve</button></div></form>';
 

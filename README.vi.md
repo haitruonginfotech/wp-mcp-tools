@@ -186,6 +186,7 @@ Giá trị repeater và flexible **thay thế** toàn bộ các dòng (sub field
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.10.4 | 2026-10-30 | OAuth: đăng ký client nhận tối đa 5 redirect URI, mỗi cái ≤ 512 ký tự; trang đồng ý hiện đầy đủ redirect URI và nói rõ tên app chưa được xác minh. Proxy Claude Desktop từ chối `http://` thường tới site từ xa (sẽ gửi Application Password không mã hóa). |
 | 0.10.3 | 2026-10-30 | **Bản vá bảo mật, nên cập nhật.** Access token OAuth có thể gọi toàn bộ REST API qua tham số `rest_route` trong body POST; nay token chỉ dùng được ở route MCP. Thêm: xuất bản và đổi tác giả kiểm tra quyền, post meta được bảo vệ cần `edit_post_meta`, user quyền thấp không đọc được bài có mật khẩu hoặc không công khai, tool taxonomy kiểm tra quyền theo từng taxonomy, kiểm tra option bảo vệ/bí mật không phân biệt hoa thường và gồm `user_roles`, updater chỉ nhận zip từ mục release của repo này. |
 | 0.10.2 | 2026-10-30 | Connection check liệt kê các request MCP và OAuth gần nhất đã tới WordPress; `diagnose` báo request cuối cùng tới lúc nào. |
 | 0.10.1 | 2026-10-30 | Chỉ ra plugin nào đang từ chối request REST (hiện trong Connection check và `diagnose`). |
