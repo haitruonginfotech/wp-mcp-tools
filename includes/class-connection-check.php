@@ -43,7 +43,7 @@ final class WPMCP_Connection_Check {
 		<section class="wpmcp-panel" id="connection-check">
 			<div class="wpmcp-panel__head">
 				<h2>Connection check</h2>
-				<p>Cannot connect an AI client? Run this self-test. It checks permalinks, the MCP and OAuth endpoints, security plugins and Cloudflare, and says what to change.</p>
+				<p>Cannot connect an AI client? Run this self-test. It checks permalinks, the MCP and OAuth endpoints, security plugins and Cloudflare, and names the plugin that rejects REST requests, if any. To do that it runs the hooks other plugins registered on the REST gates, as a logged-out visitor would.</p>
 			</div>
 			<div class="wpmcp-panel__body">
 				<p><a class="wpmcp-btn wpmcp-btn--primary" href="<?php echo esc_url( self::url() ); ?>"><?php echo $result ? 'Run again' : 'Run connection check'; ?></a></p>

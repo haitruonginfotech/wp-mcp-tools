@@ -160,6 +160,14 @@ Plugin code runs on every request, so this is stricter than theme files:
 
 Theme and plugin file tools share one implementation, `includes/class-file-ops.php` (`WPMCP_File_Ops`): listing, reading, searching, hash check, lint, backups, atomic write and the loopback check with rollback. `class-theme.php` and `class-plugin-files.php` only hold their own policy (which folder is allowed, what can never be deleted) and call into it. Security hardening in this release: `X-Content-Type-Options: nosniff` on the upload route, and the diagnose loopback request now follows WordPress's `https_local_ssl_verify` filter.
 
+## Connection problems (v0.10)
+
+*MCP Tools → Connection → Connection check* runs a self-test from the admin screen (no MCP client needed): permalinks, MCP and OAuth endpoints, security plugins, Cloudflare hints, and which plugin rejects REST requests from logged-out clients (found by running the callbacks plugins hooked to `rest_authentication_errors`, `rest_pre_dispatch` and `rest_endpoints`). It cannot see a firewall or CDN that answers before WordPress runs; it prints `curl` commands to test those from outside. The same checks are available to MCP clients as the `diagnose` tool.
+
+## Automatic updates (v0.9.5)
+
+The plugin turns on WordPress auto-updates for itself (switch in *Connection → Settings → Automatic updates*). WordPress checks twice a day, so this needs WP-Cron or a real cron. Other plugins are never touched.
+
 ## Extending
 
 ```php

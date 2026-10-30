@@ -131,6 +131,11 @@ class WPMCP_Diagnose {
 			$checks[] = self::check( 'file_mods', 'info', 'DISALLOW_FILE_MODS is set: plugin/theme install, update and delete (and WordPress auto-updates) are disabled.' );
 		}
 
+		// Which plugin rejects REST requests before ours can answer (optional add-on, class-blockers.php).
+		if ( class_exists( 'WPMCP_Blockers' ) ) {
+			$checks = array_merge( $checks, WPMCP_Blockers::checks() );
+		}
+
 		$active   = (array) get_option( 'active_plugins', array() );
 		$security = array();
 		foreach ( $active as $file ) {
