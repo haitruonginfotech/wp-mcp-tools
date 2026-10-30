@@ -162,7 +162,7 @@ Theme and plugin file tools share one implementation, `includes/class-file-ops.p
 
 ## Connection problems (v0.10)
 
-*MCP Tools → Connection → Connection check* runs a self-test from the admin screen (no MCP client needed): permalinks, MCP and OAuth endpoints, security plugins, Cloudflare hints, and which plugin rejects REST requests from logged-out clients (found by running the callbacks plugins hooked to `rest_authentication_errors`, `rest_pre_dispatch` and `rest_endpoints`). It cannot see a firewall or CDN that answers before WordPress runs; it prints `curl` commands to test those from outside. The same checks are available to MCP clients as the `diagnose` tool.
+*MCP Tools → Connection → Connection check* runs a self-test from the admin screen (no MCP client needed): permalinks, MCP and OAuth endpoints, security plugins, Cloudflare hints, and which plugin rejects REST requests from logged-out clients (found by running the callbacks plugins hooked to `rest_authentication_errors`, `rest_pre_dispatch` and `rest_endpoints`). It also lists the last requests that reached WordPress (time, endpoint, HTTP status, kind of credentials; no IP address or secrets): if a connector fails and nothing new appears there, the request was stopped before WordPress. It cannot see a firewall or CDN that answers before WordPress runs; it prints `curl` commands to test those from outside. The same checks are available to MCP clients as the `diagnose` tool.
 
 ## Automatic updates (v0.9.5)
 

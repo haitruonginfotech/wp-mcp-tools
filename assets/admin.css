@@ -210,6 +210,7 @@
 .wpmcp-tag.is-info { background: #e0f2fe; color: #0369a1; }
 .wpmcp-check-table th { width: 70px; vertical-align: top; }
 .wpmcp-check-fix { color: var(--w-muted); }
+.wpmcp-check-sub { margin: 22px 0 8px; font-size: 14px; }
 .wpmcp-code { overflow-x: auto; padding: 10px 14px; border-radius: 10px; background: #f3f4f6; font-size: 12px; }
 .wpmcp-apps small { display: block; margin-top: 3px; color: var(--w-muted); }
 .wpmcp-tools tr.is-off td { opacity: .5; }

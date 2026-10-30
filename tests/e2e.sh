@@ -110,4 +110,5 @@ python3 "$PLUGIN_DIR/tests/themefiles.py" "http://localhost:$PORT" admin "$PW" |
 . "$PLUGIN_DIR/tests/updater.sh"
 . "$PLUGIN_DIR/tests/connection_check.sh"
 . "$PLUGIN_DIR/tests/blockers.sh"
+. "$PLUGIN_DIR/tests/hitlog.sh"
 exit $STATUS

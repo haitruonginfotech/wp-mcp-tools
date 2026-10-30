@@ -89,7 +89,8 @@ class WPMCP_OAuth_Server {
 	/* Router                                                              */
 	/* ------------------------------------------------------------------ */
 
-	public static function route(): void {
+	/** Which OAuth endpoint this request is for ('' = not ours). */
+	public static function endpoint_from_request(): string {
 		$endpoint = '';
 
 		if ( isset( $_GET['wpmcp_oauth'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -112,6 +113,12 @@ class WPMCP_OAuth_Server {
 				}
 			}
 		}
+
+		return $endpoint;
+	}
+
+	public static function route(): void {
+		$endpoint = self::endpoint_from_request();
 
 		if ( '' === $endpoint ) {
 			return;

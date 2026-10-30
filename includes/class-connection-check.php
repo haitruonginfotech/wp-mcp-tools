@@ -50,7 +50,7 @@ final class WPMCP_Connection_Check {
 				<?php if ( $result ) : ?>
 					<p class="wpmcp-check-summary"><strong><?php echo esc_html( $result['summary'] ); ?></strong>
 						<span class="wpmcp-muted"> (<?php echo esc_html( (int) $result['counts']['ok'] . ' passed, ' . (int) $result['counts']['warn'] . ' warnings, ' . (int) $result['counts']['fail'] . ' failed' ); ?>)</span></p>
-					<table class="wpmcp-table wpmcp-check-table">
+					<table class="wpmcp-table wpmcp-check-table wpmcp-check-results">
 						<?php foreach ( self::sort( $result['checks'] ) as $c ) : ?>
 							<tr>
 								<th><span class="wpmcp-tag is-<?php echo esc_attr( $c['status'] ); ?>"><?php echo esc_html( $c['status'] ); ?></span></th>
@@ -69,8 +69,38 @@ final class WPMCP_Connection_Check {
 						<?php self::commands( $result['test_from_outside']['commands'] ); ?>
 					<?php endif; ?>
 				<?php endif; ?>
+				<?php self::recent(); ?>
 			</div>
 		</section>
+		<?php
+	}
+
+	/** Last requests that reached WordPress (class-hit-log.php). */
+	private static function recent(): void {
+		if ( ! class_exists( 'WPMCP_Hit_Log' ) ) {
+			return;
+		}
+		$rows = WPMCP_Hit_Log::rows();
+		?>
+		<h3 class="wpmcp-check-sub">Recent requests that reached WordPress</h3>
+		<?php if ( ! $rows ) : ?>
+			<p class="wpmcp-muted">None yet. When a connector fails and nothing new appears here, the request was stopped before WordPress (Cloudflare, a WAF or the host firewall). If it appears with 401 or 403, the cause is inside WordPress: run the check above.</p>
+		<?php else : ?>
+			<table class="wpmcp-table wpmcp-check-table">
+				<?php foreach ( $rows as $r ) : ?>
+					<?php $tone = $r['status'] >= 500 ? 'fail' : ( $r['status'] >= 400 ? ( 401 === $r['status'] && 'none' === $r['auth'] ? 'info' : 'warn' ) : 'ok' ); ?>
+					<tr>
+						<th><span class="wpmcp-tag is-<?php echo esc_attr( $tone ); ?>"><?php echo (int) $r['status']; ?></span></th>
+						<td>
+							<strong><?php echo esc_html( WPMCP_Hit_Log::label( $r['kind'] ) ); ?></strong>
+							<span class="wpmcp-muted"><?php echo esc_html( $r['method'] . ' · credentials: ' . $r['auth'] . ' · ' . human_time_diff( $r['t'] ) . ' ago' ); ?></span><br>
+							<span class="wpmcp-muted"><?php echo esc_html( '' === $r['ua'] ? 'no User-Agent' : $r['ua'] ); ?></span>
+						</td>
+					</tr>
+				<?php endforeach; ?>
+			</table>
+			<p class="wpmcp-muted">A 401 without credentials is normal: it is the first step of the sign-in. Only the newest request of each kind in a minute is kept.</p>
+		<?php endif; ?>
 		<?php
 	}
 

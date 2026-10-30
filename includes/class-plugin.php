@@ -34,6 +34,7 @@ class WPMCP_Plugin {
 		// OAuth tables are created on activation; this covers copied-in updates.
 		WPMCP_OAuth_Store::maybe_install();
 		WPMCP_OAuth_Server::init();
+		WPMCP_Hit_Log::init(); // Optional add-on (v0.10.2).
 
 		foreach ( self::MODULES as $module ) {
 			$module::register();
