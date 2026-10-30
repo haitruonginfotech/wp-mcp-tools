@@ -605,6 +605,9 @@ class WPMCP_Admin {
 			</div>
 		</section>
 
+		<?php /* Optional add-on (v0.10.0): remove this line, class-connection-check.php and its require to drop it. */ ?>
+		<?php WPMCP_Connection_Check::render(); ?>
+
 		<?php /* Optional add-on (v0.9.0). To drop it: remove this line, render_desktop() and includes/class-desktop.php. */ ?>
 		<?php self::render_desktop( $url, $user->user_login, $new_pw ? (string) $new_pw : '' ); ?>
 
