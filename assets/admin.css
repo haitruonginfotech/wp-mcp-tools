@@ -211,7 +211,7 @@
 .wpmcp-check-table th { width: 70px; vertical-align: top; }
 .wpmcp-check-fix { color: var(--w-muted); }
 .wpmcp-check-sub { margin: 22px 0 8px; font-size: 14px; }
-.wpmcp-code { overflow-x: auto; padding: 10px 14px; border-radius: 10px; background: #f3f4f6; font-size: 12px; }
+.wpmcp-check-code { overflow-x: auto; padding: 10px 14px; border-radius: 10px; background: #f3f4f6; font-size: 12px; }
 .wpmcp-apps small { display: block; margin-top: 3px; color: var(--w-muted); }
 .wpmcp-tools tr.is-off td { opacity: .5; }
 .wpmcp-empty { display: flex; align-items: center; gap: 12px; margin: 0; padding: 18px; border: 1px dashed var(--w-line-2); border-radius: 12px; color: var(--w-muted); }

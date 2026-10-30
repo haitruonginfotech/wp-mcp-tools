@@ -186,6 +186,7 @@ Repeater and flexible values **replace** all rows (a sub field missing from a ro
 
 | Version | Date | Changes |
 |---|---|---|
+| 0.10.5 | 2026-10-30 | Fix: the copy boxes in *Connect your AI client* showed light text on a light background (since 0.10.0). The Connection check commands use their own style now. |
 | 0.10.4 | 2026-10-30 | OAuth: registration accepts at most 5 redirect URIs of 512 characters; the consent page shows the full redirect URI and says the app name is unverified. Claude Desktop proxy refuses plain `http://` to a remote site (would send the Application Password unencrypted). |
 | 0.10.3 | 2026-10-30 | **Security release, update recommended.** An OAuth access token could reach the whole REST API through a `rest_route` value in a POST body; it is now confined to the MCP route. Also: publishing and author changes check the user's capabilities, protected post meta needs `edit_post_meta`, password-protected and non-public posts are not readable by low-privilege users, taxonomy tools check per-taxonomy capabilities, protected-option and secret-option checks are case-insensitive and cover `user_roles`, and the updater only accepts a zip from this repository's release downloads. |
 | 0.10.2 | 2026-10-30 | Connection check lists the last MCP and OAuth requests that reached WordPress; `diagnose` reports when the last one arrived. |

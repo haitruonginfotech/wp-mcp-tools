@@ -106,6 +106,6 @@ final class WPMCP_Connection_Check {
 
 	/** @param string[] $commands curl commands. */
 	private static function commands( array $commands ): void {
-		echo '<pre class="wpmcp-code">' . esc_html( implode( "\n", $commands ) ) . '</pre>';
+		echo '<pre class="wpmcp-check-code">' . esc_html( implode( "\n", $commands ) ) . '</pre>';
 	}
 }
