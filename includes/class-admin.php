@@ -481,6 +481,14 @@ class WPMCP_Admin {
 					<div class="wpmcp-row__ctl"><?php self::switch_input( $opt . '[oauth_enabled]', $oauth_on, 'Let clients connect by signing in (OAuth)' ); ?></div>
 				</div>
 
+				<div class="wpmcp-row">
+					<div class="wpmcp-row__text">
+						<h3>Automatic updates</h3>
+						<p>Let WordPress install new WP MCP Tools releases by itself (this plugin only). It runs with WordPress' twice-daily check, so it needs WP-Cron or a real cron. Turn off to update by clicking <em>Update now</em> on the Plugins screen.</p>
+					</div>
+					<div class="wpmcp-row__ctl"><?php self::switch_input( $opt . '[auto_update]', ! empty( $s['auto_update'] ), 'Update WP MCP Tools automatically' ); ?></div>
+				</div>
+
 				<div class="wpmcp-row wpmcp-row--stack">
 					<div class="wpmcp-row__text">
 						<h3><label for="wpmcp-public-url">Server URL</label></h3>
@@ -760,7 +768,7 @@ class WPMCP_Admin {
 		foreach ( array( 'endpoint_capability', 'public_url', 'auth_method' ) as $k ) {
 			printf( '<input type="hidden" name="%s[%s]" value="%s">', esc_attr( $opt ), esc_attr( $k ), esc_attr( (string) $s[ $k ] ) );
 		}
-		foreach ( array( 'enabled', 'oauth_enabled', 'expose_default_server' ) as $k ) {
+		foreach ( array( 'enabled', 'oauth_enabled', 'expose_default_server', 'auto_update' ) as $k ) {
 			if ( ! empty( $s[ $k ] ) ) {
 				printf( '<input type="hidden" name="%s[%s]" value="1">', esc_attr( $opt ), esc_attr( $k ) );
 			}

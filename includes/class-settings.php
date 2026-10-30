@@ -46,6 +46,8 @@ class WPMCP_Settings {
 			'public_url'            => '',
 			// Auth method shown in the "Connect your AI client" instructions.
 			'auth_method'           => 'oauth',
+			// Let WordPress install new WP MCP Tools releases by itself (this plugin only).
+			'auto_update'           => 1,
 		);
 	}
 
@@ -137,6 +139,7 @@ class WPMCP_Settings {
 		$out['enabled']               = empty( $input['enabled'] ) ? 0 : 1;
 		$out['expose_default_server'] = empty( $input['expose_default_server'] ) ? 0 : 1;
 		$out['oauth_enabled']         = empty( $input['oauth_enabled'] ) ? 0 : 1;
+		$out['auto_update']           = empty( $input['auto_update'] ) ? 0 : 1;
 
 		$cap                        = sanitize_key( $input['endpoint_capability'] ?? $def['endpoint_capability'] );
 		$out['endpoint_capability'] = in_array( $cap, self::CAPABILITIES, true ) ? $cap : $def['endpoint_capability'];

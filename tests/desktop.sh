@@ -27,7 +27,7 @@ names = sorted(z.namelist())
 m = json.loads(z.read('manifest.json'))
 ok = names == ['manifest.json', 'server/index.js'] and z.read('server/index.js') == open(sys.argv[2], 'rb').read()
 print(('PASS' if ok else 'FAIL') + ' mcpb contains manifest.json + the proxy as server/index.js', names)
-ok2 = m['server']['entry_point'] == 'server/index.js' and 'abcd' not in json.dumps(m) and m['version'] == '0.9.4'
+ok2 = m['server']['entry_point'] == 'server/index.js' and 'abcd' not in json.dumps(m) and m['version'] == '0.9.5'
 print(('PASS' if ok2 else 'FAIL') + ' manifest entry point, version, no secret')
 sys.exit(0 if ok and ok2 else 1)
 PY

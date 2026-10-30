@@ -35,7 +35,17 @@ $n = 0;
 add_filter( 'pre_http_request', function ( $pre ) use ( &$n ) { $n++; return $pre; }, 1 );
 do_action( 'load-plugins.php' );
 echo ( 0 === $n ? 'PASS' : 'FAIL' ) . " no extra remote call when already listed\n";
-exit( $ok && 0 === $n ? 0 : 1 );
+$item = (object) array( 'plugin' => $file );
+$on   = true === WPMCP_Updater::auto_update( false, $item );
+echo ( $on ? 'PASS' : 'FAIL' ) . " auto-update on by default for this plugin\n";
+$other = (object) array( 'plugin' => 'other/other.php' );
+$ok2   = false === WPMCP_Updater::auto_update( false, $other );
+echo ( $ok2 ? 'PASS' : 'FAIL' ) . " auto-update never forced for other plugins\n";
+update_option( WPMCP_Settings::OPTION, array_merge( WPMCP_Settings::all(), array( 'auto_update' => 0 ) ) );
+$ok3 = false === WPMCP_Updater::auto_update( false, $item );
+echo ( $ok3 ? 'PASS' : 'FAIL' ) . " switch off leaves WordPress toggle in charge\n";
+update_option( WPMCP_Settings::OPTION, array_merge( WPMCP_Settings::all(), array( 'auto_update' => 1 ) ) );
+exit( $ok && 0 === $n && $on && $ok2 && $ok3 ? 0 : 1 );
 PHP
 WPDIR="$WP" PORT="$PORT" php "$WORK/updater.php" 2>&1 | tee "$WORK/updater.out"
 if grep -q '^FAIL\|Warning\|Notice\|Deprecated\|Fatal' "$WORK/updater.out"; then STATUS=1; fi

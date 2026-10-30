@@ -34,6 +34,7 @@ final class WPMCP_Updater {
 		add_filter( 'upgrader_source_selection', array( __CLASS__, 'fix_folder' ), 10, 4 );
 		add_action( 'upgrader_process_complete', array( __CLASS__, 'flush' ), 10, 0 );
 		add_action( 'load-plugins.php', array( __CLASS__, 'ensure_checked' ), 1 );
+		add_filter( 'auto_update_plugin', array( __CLASS__, 'auto_update' ), 10, 2 );
 	}
 
 	public static function repo(): string {
@@ -73,6 +74,20 @@ final class WPMCP_Updater {
 			require_once ABSPATH . 'wp-includes/update.php';
 		}
 		wp_update_plugins();
+	}
+
+	/**
+	 * Filter: auto_update_plugin. Install new releases of this plugin by itself unless the setting is off.
+	 * Only turns it on: when off we leave WordPress' own per-plugin toggle in charge.
+	 *
+	 * @param bool|null $update Current decision.
+	 * @param object    $item   Update offer (has ->plugin).
+	 */
+	public static function auto_update( $update, $item ) {
+		if ( isset( $item->plugin ) && self::basename() === $item->plugin && WPMCP_Settings::get( 'auto_update' ) ) {
+			return true;
+		}
+		return $update;
 	}
 
 	/**
@@ -146,7 +161,8 @@ final class WPMCP_Updater {
 		if ( self::basename() !== $plugin_file ) {
 			return $update;
 		}
-		$force   = is_admin() && isset( $_GET['force-check'] ); // phpcs:ignore WordPress.Security.NonceVerification
+		// The twice-daily cron check always asks GitHub, so a fresh release is never hidden by our own cache.
+		$force   = wp_doing_cron() || ( is_admin() && isset( $_GET['force-check'] ) ); // phpcs:ignore WordPress.Security.NonceVerification
 		$release = self::latest( $force );
 		if ( ! $release ) {
 			return $update;

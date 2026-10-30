@@ -16,7 +16,7 @@ foreach ( array( 'connection', 'tools' ) as $tab ) {
 	$html = ob_get_clean();
 	$need = 'tools' === $tab
 		? array( 'Tool groups', 'Editable plugins', 'wpmcp-edit', 'Plugin files (write)', 'list-editable-plugins' )
-		: array( 'MCP server URL', 'id="claude-desktop"', 'Download .mcpb', 'wpmcp_download_proxy', 'claude_desktop_config.json' );
+		: array( 'MCP server URL', 'Automatic updates', 'id="claude-desktop"', 'Download .mcpb', 'wpmcp_download_proxy', 'claude_desktop_config.json' );
 	foreach ( $need as $needle ) {
 		$ok = false !== strpos( $html, $needle );
 		echo ( $ok ? 'PASS' : 'FAIL' ) . " admin $tab tab contains: $needle\n";
