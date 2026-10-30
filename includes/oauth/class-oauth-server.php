@@ -21,6 +21,9 @@ class WPMCP_OAuth_Server {
 	/** @var string Error code set when a Bearer token was sent but is invalid. */
 	private static $bearer_error = '';
 
+	/** @var int User a Bearer token signed in for this request (0 = none). */
+	private static $bearer_user = 0;
+
 	public static function init(): void {
 		add_action( 'init', array( __CLASS__, 'route' ), 1 );
 		add_action( 'wpmcp_oauth_purge', array( 'WPMCP_OAuth_Store', 'purge_expired' ) );
@@ -37,6 +40,7 @@ class WPMCP_OAuth_Server {
 			return;
 		}
 		add_filter( 'determine_current_user', array( __CLASS__, 'authenticate_bearer' ), 30 );
+		add_filter( 'rest_pre_dispatch', array( __CLASS__, 'confine_bearer' ), 1, 3 );
 		add_filter( 'rest_post_dispatch', array( __CLASS__, 'add_www_authenticate' ), 10, 3 );
 	}
 
@@ -759,6 +763,9 @@ input[type=file]{width:100%;padding:14px;border:1.5px dashed var(--line);border-
 	/** Is the current request for our MCP REST route? */
 	private static function is_mcp_request(): bool {
 		$route = '/' . WPMCP_ROUTE_NAMESPACE . '/' . WPMCP_ROUTE;
+		if ( isset( $_POST['rest_route'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			return false; // WordPress would dispatch the route named in the body, not the one in the URL.
+		}
 		if ( isset( $_GET['rest_route'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			return untrailingslashit( sanitize_text_field( wp_unslash( $_GET['rest_route'] ) ) ) === $route; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		}
@@ -789,7 +796,27 @@ input[type=file]{width:100%;padding:14px;border:1.5px dashed var(--line);border-
 			self::$bearer_error = 'invalid_token';
 			return $user_id;
 		}
-		return (int) $row->user_id;
+		self::$bearer_user = (int) $row->user_id;
+		return self::$bearer_user;
+	}
+
+	/**
+	 * Filter: rest_pre_dispatch. A Bearer token is valid for the MCP route only. This looks at the route
+	 * WordPress is really about to run, so a URL that looks like the MCP route but dispatches another route
+	 * (for example through a rest_route value in the request body) cannot use the token.
+	 *
+	 * @param mixed           $result  Short-circuit value.
+	 * @param WP_REST_Server  $server  Server.
+	 * @param WP_REST_Request $request Request.
+	 * @return mixed
+	 */
+	public static function confine_bearer( $result, $server, $request ) {
+		if ( self::$bearer_user && get_current_user_id() === self::$bearer_user
+			&& untrailingslashit( $request->get_route() ) !== '/' . WPMCP_ROUTE_NAMESPACE . '/' . WPMCP_ROUTE ) {
+			wp_set_current_user( 0 );
+			return new WP_Error( 'wpmcp_token_scope', 'This access token is only valid for the MCP endpoint.', array( 'status' => 403 ) );
+		}
+		return $result;
 	}
 
 	/**

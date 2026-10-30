@@ -129,7 +129,16 @@ class WPMCP_Fields {
 	 * @return bool|WP_Error
 	 */
 	public static function can_read_target( array $input ) {
-		return self::can_write_target( $input ) || current_user_can( 'edit_posts' );
+		if ( self::can_write_target( $input ) ) {
+			return true;
+		}
+		list( , $kind, $id ) = self::parse_target( $input['target'] ?? '' );
+		if ( 'post' !== $kind ) {
+			return false;
+		}
+		$post = get_post( $id );
+		$pto  = $post ? get_post_type_object( $post->post_type ) : null;
+		return $post && $pto && 'publish' === $post->post_status && $pto->public && empty( $post->post_password ) && current_user_can( 'edit_posts' );
 	}
 
 	/**

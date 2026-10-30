@@ -138,7 +138,7 @@ final class WPMCP_Updater {
 				break;
 			}
 		}
-		if ( '' === $package || 0 !== strpos( $package, 'https://github.com/' ) ) {
+		if ( '' === $package || 0 !== strpos( $package, 'https://github.com/' . self::repo() . '/releases/download/' ) ) {
 			return null; // Only ship the built zip (has vendor/); never the raw source archive.
 		}
 		return array(

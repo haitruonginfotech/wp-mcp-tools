@@ -327,8 +327,11 @@ class WPMCP_Posts {
 		if ( ! $post ) {
 			return $h::error( 'not_found', 'Post not found.', 404 );
 		}
-		if ( ! current_user_can( 'edit_post', $post->ID ) && 'publish' !== $post->post_status ) {
-			return $h::error( 'forbidden', 'You cannot read this post.', 403 );
+		if ( ! current_user_can( 'edit_post', $post->ID ) ) {
+			$pto = get_post_type_object( $post->post_type );
+			if ( 'publish' !== $post->post_status || ! $pto || ! $pto->publicly_queryable && ! $pto->public || post_password_required( $post ) || ! empty( $post->post_password ) ) {
+				return $h::error( 'forbidden', 'You cannot read this post.', 403 );
+			}
 		}
 
 		$data = $h::format_post( $post, true );
@@ -385,6 +388,25 @@ class WPMCP_Posts {
 	}
 
 	/**
+	 * Refuse status/author changes the current user is not allowed to make.
+	 *
+	 * @return WP_Error|null
+	 */
+	private static function check_privileged_fields( array $arr, string $type ) {
+		$pto = get_post_type_object( $type );
+		if ( ! $pto ) {
+			return null;
+		}
+		if ( isset( $arr['post_status'] ) && in_array( $arr['post_status'], array( 'publish', 'future' ), true ) && ! current_user_can( $pto->cap->publish_posts ) ) {
+			return WPMCP_Helpers::error( 'forbidden', 'You cannot publish ' . $type . ' content.', 403 );
+		}
+		if ( isset( $arr['post_author'] ) && (int) $arr['post_author'] !== get_current_user_id() && ! current_user_can( $pto->cap->edit_others_posts ) ) {
+			return WPMCP_Helpers::error( 'forbidden', 'You cannot assign another author.', 403 );
+		}
+		return null;
+	}
+
+	/**
 	 * Apply meta, terms, featured image after insert/update.
 	 *
 	 * @return array Warnings.
@@ -394,6 +416,10 @@ class WPMCP_Posts {
 
 		if ( ! empty( $input['meta'] ) && is_array( $input['meta'] ) ) {
 			foreach ( $input['meta'] as $key => $value ) {
+				if ( ! current_user_can( 'edit_post_meta', $post_id, (string) $key ) ) {
+					$warnings[] = 'Meta key not allowed: ' . $key;
+					continue;
+				}
 				update_post_meta( $post_id, (string) $key, wp_slash( $value ) );
 			}
 		}
@@ -439,6 +465,10 @@ class WPMCP_Posts {
 		if ( empty( $arr['post_status'] ) ) {
 			$arr['post_status'] = 'draft';
 		}
+		$denied = self::check_privileged_fields( $arr, $type );
+		if ( $denied ) {
+			return $denied;
+		}
 
 		$id = wp_insert_post( wp_slash( $arr ), true );
 		if ( is_wp_error( $id ) ) {
@@ -464,6 +494,10 @@ class WPMCP_Posts {
 
 		$arr = self::postarr( $input );
 		if ( $arr ) {
+			$denied = self::check_privileged_fields( $arr, $post->post_type );
+			if ( $denied ) {
+				return $denied;
+			}
 			$arr['ID'] = $post->ID;
 			$res       = wp_update_post( wp_slash( $arr ), true );
 			if ( is_wp_error( $res ) ) {
@@ -600,13 +634,22 @@ class WPMCP_Posts {
 		if ( is_wp_error( $post ) ) {
 			return $post;
 		}
-		$set = array();
+		$set     = array();
+		$skipped = array();
 		foreach ( (array) WPMCP_Helpers::arg( $input, 'meta', array() ) as $key => $value ) {
+			if ( ! current_user_can( 'edit_post_meta', $post->ID, (string) $key ) ) {
+				$skipped[] = (string) $key;
+				continue;
+			}
 			update_post_meta( $post->ID, (string) $key, wp_slash( $value ) );
 			$set[] = (string) $key;
 		}
 		$deleted = array();
 		foreach ( (array) WPMCP_Helpers::arg( $input, 'delete', array() ) as $key ) {
+			if ( ! current_user_can( 'delete_post_meta', $post->ID, (string) $key ) ) {
+				$skipped[] = (string) $key;
+				continue;
+			}
 			if ( delete_post_meta( $post->ID, (string) $key ) ) {
 				$deleted[] = (string) $key;
 			}
@@ -615,6 +658,7 @@ class WPMCP_Posts {
 			'id'      => $post->ID,
 			'set'     => $set,
 			'deleted' => $deleted,
+			'skipped' => $skipped,
 			'meta'    => WPMCP_Helpers::post_meta( $post->ID, $set ),
 		);
 	}

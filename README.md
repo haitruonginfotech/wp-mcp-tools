@@ -1,174 +1,52 @@
 # WP MCP Tools
 
-WordPress plugin that registers **Abilities API** abilities for content, SCF/ACF fields, media, menus,
-options and theme files, and exposes them as a **dedicated MCP server** through the official
-[WordPress MCP Adapter](https://github.com/WordPress/mcp-adapter), which is **bundled** in `vendor/` since v0.4.0. Similar in spirit to `emcp-tools`,
-with no Elementor dependency: it targets classic/SCF sites. When Elementor 4.x is active, its own builder abilities
-are served on the same server too (v0.6.0, see *Elementor*).
+**English** · [Tiếng Việt](README.vi.md)
+
+WordPress plugin that turns your site into a **dedicated MCP server** for AI assistants (Claude, ChatGPT, Cursor, VS Code and others). It registers WordPress **Abilities API** abilities for content, SCF/ACF fields, media, menus, options and theme files, and serves them through the official [WordPress MCP Adapter](https://github.com/WordPress/mcp-adapter), which is **bundled** in `vendor/`. Plugin management, plugin file editing and Elementor tools are available as opt-in groups.
 
 - Endpoint: `/wp-json/wp-mcp-tools/mcp` (server id `wp-mcp-tools`)
-- MCP tool names: `wpmcp-<tool>`, e.g. `wpmcp-list-posts`, `wpmcp-update-fields`
-- Admin: **MCP Tools** menu → *Connection* (status, auth method, connected apps, per-client setup steps) and *Tools* (group toggles, tool list)
-- Admin bar **MCP** menu (admins only): status dot, Abilities API / MCP Adapter / exposure / active tools / OAuth, **Turn MCP on/off**, link to Connection settings. When MCP is off, the MCP endpoint and OAuth endpoints return 404.
-- Two auth methods, like EMCP Tools: **OAuth 2.1** (browser sign-in + approve, recommended) and **Application Password** (Basic auth header)
+- Tool names: `wpmcp-<tool>`, for example `wpmcp-list-posts`, `wpmcp-update-fields`
+- Two sign-in methods: **OAuth 2.1** (browser sign-in and approve, recommended) and **Application Password** (Basic auth)
+- Admin: **MCP Tools** menu → *Connection* (status, settings, connected apps, client setup, connection check) and *Tools* (group switches, tool list)
+- Admin bar **MCP** menu (administrators only): status, **Turn MCP on/off**. When MCP is off, the MCP and OAuth endpoints return 404.
 
 ## Requirements
 
 - WordPress 6.9+ (Abilities API in core), PHP 7.4+
-- Nothing else: the **MCP Adapter** (0.7.1) is bundled. The standalone MCP Adapter plugin is not needed; if it (or another plugin that bundles it, e.g. Elementor) is active too, the Jetpack Autoloader loads only the newest copy.
-- Optional: Secure Custom Fields / ACF (enables the `fields` group)
-- OAuth: pretty permalinks enabled, and the web server must pass the `Authorization` header to PHP (the default WordPress `.htaccess` does)
+- Nothing else. The MCP Adapter (0.7.1) is bundled. If the standalone MCP Adapter plugin, or another plugin that bundles it, is also active, the newest copy is used.
+- Optional: Secure Custom Fields / ACF (enables the `fields` group), Elementor 4.x (enables the `elementor` group)
+- OAuth needs pretty permalinks, and the web server must pass the `Authorization` header to PHP (the default WordPress `.htaccess` does)
 
-## Cài đặt & kết nối (Tiếng Việt)
+## Install and connect
 
-1. Copy thư mục `wp-mcp-tools` (hoặc cài file zip) vào `wp-content/plugins/` rồi kích hoạt **WP MCP Tools**. Không cần cài plugin **MCP Adapter** riêng (đã nhúng sẵn trong `vendor/`). Nếu site đang có plugin MCP Adapter riêng thì có thể tắt và xóa nó.
-2. Vào menu **MCP Tools → Connection** và chọn cách xác thực:
-   - **OAuth (khuyên dùng):** không cần copy mật khẩu. Client tự đăng ký, mở một trang trên site để bạn đăng nhập WordPress và bấm **Approve**. Các app đã kết nối hiện trong bảng *Connected apps*, có nút *Sign out* (thu hồi token) và *Remove* (xoá đăng ký).
-   - **Application password:** bấm *Generate application password*; mật khẩu được điền sẵn vào các config bên dưới và chỉ hiện một lần.
-3. Chọn client (Claude Desktop, Claude.ai, Claude Code, Cursor, VS Code, ChatGPT, npx mcp-remote) rồi làm theo các bước và copy config.
+1. Install the release zip (*Plugins → Add New → Upload Plugin*) and activate **WP MCP Tools**. No other plugin is needed.
+2. Open **MCP Tools → Connection** and pick a sign-in method:
+   - **OAuth (recommended):** nothing to copy. The client registers itself, opens a page on your site where you log in and press **Approve**. Connected apps are listed under *Connected apps* with a *Sign out* button.
+   - **Application Password:** press *Generate application password*. It is filled into the client snippets below and shown only once.
+3. Choose your client (Claude Desktop, Claude.ai, Claude Code, Cursor, VS Code, ChatGPT, `npx mcp-remote`) and follow the steps.
 
-Lưu ý với site local (`*.local`, `localhost`, http): Claude.ai, connector của Claude Desktop và ChatGPT chạy trên cloud nên **không gọi được** site local. Hãy dùng Claude Code, Cursor, VS Code hoặc `npx mcp-remote` (config Claude Desktop "Option B"; OAuth chạy qua callback localhost). Với LocalWP (HTTPS tự ký), Node báo "Connection closed": thêm `"env": { "NODE_EXTRA_CA_CERTS": "C:\\Users\\<user>\\AppData\\Roaming\\Local\\run\\router\\nginx\\certs\\<site>.local.crt" }` vào config. Cách khác là đưa site ra public HTTPS bằng tunnel và điền **Server URL**.
-
-## Bundled MCP Adapter & updates
-
-- `vendor/` is committed and shipped: `wordpress/mcp-adapter`, `wordpress/php-mcp-schema`, `automattic/jetpack-autoloader` (Composer, `--no-dev -o`). `wp-mcp-tools.php` loads `vendor/autoload_packages.php`; `WPMCP_Plugin::boot_adapter()` starts the adapter with `WP\MCP\Plugin::instance()` (only when MCP is on).
-- Admin shows which copy is running: *MCP Adapter: v0.7.1 (bundled)* or *(MCP Adapter plugin)* / *(another plugin)*.
-- **Upstream warning:** since 0.7.0 the MCP Adapter team marks "MCP Adapter as a bundled library" as deprecated and says it may not be supported later. If a future version breaks bundling, install the standalone MCP Adapter plugin: it wins when it is newer, and wp-mcp-tools keeps working.
-- **New adapter release → automatic release (GitHub, v0.5.0+):** `.github/workflows/update-mcp-adapter.yml` runs every Monday 02:17 UTC (and on demand). It updates `composer.json` / `composer.lock` / `vendor/` to the latest release and runs `tests/e2e.sh` (fresh WordPress + SQLite: MCP initialize, tools/list, tools/call).
-  - **e2e passes:** commits to `master`, bumps the patch version (`Version:` + `WPMCP_VERSION`), tags `vX.Y.Z` and publishes a GitHub Release with `wp-mcp-tools-X.Y.Z.zip`.
-  - **e2e fails** (or auto-release is off): opens a pull request `update/mcp-adapter`; nothing is released.
-  - Turn auto-release off: repository variable `MCP_AUTO_RELEASE` = `false`, or run the workflow with *auto_release* unticked.
-- **Sites update themselves (v0.5.0+):** the header `Update URI: https://github.com/haitruonginfotech/wp-mcp-tools` + `includes/class-updater.php` make WordPress read the latest GitHub Release (public API, no token, cached 6 h; *Dashboard → Updates → Check again* skips the cache). Updates appear like any plugin update, with *View details*. Click **Enable auto-updates** on the Plugins screen and WordPress installs new releases in the background (with its usual fatal-error check and rollback). A plugin installed in another folder name (e.g. `wp-mcp-tools-main`) keeps that folder. Options in `wp-config.php`: `define( 'WPMCP_UPDATE_REPO', 'owner/repo' );` (fork), `define( 'WPMCP_DISABLE_UPDATER', true );`.
-- Manual release: bump `Version:` + `WPMCP_VERSION`, commit, push a tag `vX.Y.Z` (must match `WPMCP_VERSION`); `.github/workflows/release.yml` attaches the zip to the GitHub Release.
-- Manual update (needs PHP + Composer): `composer require "wordpress/mcp-adapter:~X.Y.Z" --no-update && composer update --no-dev -o`, then `bash tests/e2e.sh`.
-- Build a zip locally: `git archive --format=zip --prefix=wp-mcp-tools/ -o wp-mcp-tools-X.Y.Z.zip HEAD` (excludes `AI/`, `tests/`, `.github/`, `composer.*` via `.gitattributes`).
-
-## OAuth endpoints
-
-| Endpoint | URL |
-|---|---|
-| Protected resource metadata (RFC 9728) | `/.well-known/oauth-protected-resource/wp-json/wp-mcp-tools/mcp` |
-| Authorization server metadata (RFC 8414) | `/.well-known/oauth-authorization-server` |
-| Dynamic client registration (RFC 7591) | `/wpmcp-oauth/register` |
-| Authorize (login + consent, PKCE S256 required) | `/wpmcp-oauth/authorize` |
-| Token (authorization_code, refresh_token with rotation) | `/wpmcp-oauth/token` |
-| Revoke (RFC 7009) | `/wpmcp-oauth/revoke` |
-
-An unauthenticated MCP request gets `401` with `WWW-Authenticate: Bearer resource_metadata="…"`. Access tokens last 1 hour and refresh tokens 30 days. Tokens are stored hashed (SHA-256) in `{prefix}wpmcp_oauth_tokens` and are only accepted on the wp-mcp-tools MCP route.
+Local sites (`*.local`, `localhost`, plain http): Claude.ai, ChatGPT and Claude Desktop connectors run in the cloud and cannot reach them. See *Claude Desktop and local sites*.
 
 ## Tool groups
 
+Each group is a switch under *MCP Tools → Tools*. Groups marked **off** stay disabled until you enable them.
+
 | Group | Tools |
 |---|---|
-| site | get-site-info, get-options, update-options, list-plugins, list-themes, **get-update-status**, **diagnose** |
+| site | get-site-info, get-options, update-options, list-plugins, list-themes, get-update-status, diagnose |
 | content | list-post-types, list-posts, get-post, create-post, update-post, replace-in-post, delete-post, duplicate-post, update-post-meta, list-page-templates, list-revisions, restore-revision |
 | taxonomies | list-taxonomies, list-terms, create-term, update-term, delete-term, set-post-terms |
 | fields (SCF/ACF) | list-field-groups, get-field-group, get-fields, update-fields |
-| media | list-media, get-media, upload-media, **create-upload-session**, **get-upload-session**, **upload-media-chunk**, update-media, delete-media |
+| media | list-media, get-media, upload-media, create-upload-session, get-upload-session, upload-media-chunk, update-media, delete-media |
 | menus | list-menus, get-menu, create-menu, add-menu-item, update-menu-item, delete-menu-item, assign-menu-location |
 | theme (read) | list-theme-files, read-theme-file, search-theme-files |
 | theme-write | write-theme-file, edit-theme-file, delete-theme-file, list-theme-backups, restore-theme-backup |
-| plugin-read (**off by default**) | list-editable-plugins, list-plugin-files, read-plugin-file, search-plugin-files |
-| plugin-write (**off by default**) | write-plugin-file, edit-plugin-file, delete-plugin-file, list-plugin-backups, restore-plugin-backup |
-| manage (**off by default**) | activate-plugin, deactivate-plugin, install-plugin, update-plugin, delete-plugin, switch-theme, install-theme, update-theme |
-| elementor (needs Elementor 4.x) | Elementor's own abilities, named `elementor-<name>`: get-page-structure, create-page, build-composition, manage-elements, update-page-settings, publish-document, create-preview-link, list-posts, list-assets, list-widget-schemas, get-widget-schema, list-dynamic-tags, manage-classes, reorder-classes, manage-global-variable, manage-default-styles, get-default-styles, list-components, manage-component, list-resources, read-resource; Pro: list-site-parts, manage-site-parts. Plus 7 MCP resources (`elementor://global-classes`, `elementor://global-variables`, best practices …) |
+| plugin-read (**off**) | list-editable-plugins, list-plugin-files, read-plugin-file, search-plugin-files |
+| plugin-write (**off**) | write-plugin-file, edit-plugin-file, delete-plugin-file, list-plugin-backups, restore-plugin-backup |
+| manage (**off**) | activate-plugin, deactivate-plugin, install-plugin, update-plugin, delete-plugin, switch-theme, install-theme, update-theme |
+| elementor (needs Elementor 4.x) | Elementor's own abilities, named `elementor-<name>` |
 
-## Sign-in pages (v0.7.1)
-
-The approval page ("Connect <app> to <site>") and the error pages (Unknown application, Invalid redirect address, Session expired) were redesigned: same teal look as the admin screen, dark mode, mobile layout, the signed-in account, the tool groups the app gets (groups that change files or plugins carry a caution label), and numbered "What to do" steps on errors. No external fonts/scripts. The upload-link page shares the layout. Logic and security checks are unchanged (`tests/oauth_pages.py`). The "Authorization successful, you may close this window" page seen afterwards belongs to the client (Claude Code / mcp-remote), not to this plugin.
-
-## Update tracking, diagnose, plugin/theme management (v0.7.0)
-
-- **`wpmcp-get-update-status`** (site group) — for watching many sites: installed version, latest GitHub release, whether WordPress **auto-updates** this plugin (`auto_update.enabled`, plus `cron_disabled` / `updater_disabled`), and an **update history** where each entry says *how* it happened: `auto` (WordPress background update), `manual-click` ("Update now" on the Plugins screen), `manual-admin` (Dashboard → Updates / bulk), `manual-upload` (zip upload), `wp-cli`, or `detected` (the version changed without WordPress reporting it: files copied / FTP, or the update came from a release older than 0.7.0). `check=true` asks GitHub now instead of using the 6 h cache. `wpmcp-get-site-info` also carries a short `updater` block. The log is the option `wpmcp_update_log` (last 20 entries).
-- **`wpmcp-diagnose`** (site group) — self-test for "403 / Couldn't register with the sign-in service / cannot connect": permalinks, HTTPS, MCP route (must answer 401 + `WWW-Authenticate` when logged out), OAuth discovery + registration endpoints, security plugins (Wordfence, Sucuri, Solid Security, WPS Hide Login, Disable REST API …), Cloudflare hints, file-edit/file-mods constants, auto-update state. Each failed check has a `fix`. These are **loopback** requests from the server to itself: they cannot see a firewall/CDN rule that only blocks outside IPs (e.g. Anthropic's cloud), so the result also lists `curl` commands to run from another network (401 / 200 / 200 / 400 JSON = OK; 403 or an HTML page = blocked).
-- **`manage` group (off by default)** — enable it in *MCP Tools → Tools → Plugins & themes (manage)*. Activate / deactivate / install (wordpress.org slug only) / update / delete plugins; switch / install / update themes. Safety: WP MCP Tools cannot deactivate, delete or update itself through these tools; install/update/delete honour `DISALLOW_FILE_MODS`; delete refuses active plugins; after activating a plugin or switching theme the home page is requested and a fatal error reverts the change.
-- **Fix (affects 0.6.0 and older):** a tool whose capability string equals a global WordPress function name (`activate_plugins`, `delete_plugins`) was *called as a function* by the permission check. Capability strings are now never treated as callbacks. `wpmcp-list-plugins` (capability `activate_plugins`) was affected.
-- Editing plugin files through MCP is **not** included (themes only).
-
-## Elementor (v0.6.0)
-
-`includes/integrations/class-elementor.php` bridges **Elementor's built-in MCP module** (Elementor 4.3+, `Elementor\Modules\Mcp`; Pro adds site parts) — it does not re-implement builder logic:
-
-- If Elementor's own MCP setting is off (option `elementor_mcp_enabled`), the bridge registers Elementor's abilities with Elementor's own code (`Abstract_Ability::register()`), so permissions, schemas and checks stay Elementor's. If it is on, Elementor registers them and Elementor's server `/wp-json/elementor/mcp` keeps working as well.
-- Their ids are added to the WP MCP Tools server (tools + resources), so one OAuth / Application Password connection covers WordPress, SCF/ACF and Elementor.
-- Most builder tools (build-composition, manage-elements, classes, variables, components …) need Elementor's **Atomic Editor** (v4, on by default in new Elementor 4 installs). Without it Elementor answers "needs Atomic Editor" and says so in the tool description; `wpmcp-get-site-info` → `elementor.atomic_editor`.
-- Switch off: *MCP Tools → Tools → Elementor* group. Elementor not active → the group shows "Unavailable" and nothing changes.
-- Tested (WP 7.1.3 + SQLite, Elementor 4.3.5 + Pro 4.3.2): `tests/elementor.py` — 22 tools + 7 resources listed, create-page → build-composition (flexbox + heading) → get-page-structure, list-site-parts (Pro); group off → 46 tools; Elementor's own server on at the same time → both servers work.
-
-## Admin screen (v0.3.1)
-**MCP Tools** (admin menu, plug + spark icon) has two tabs:
-- **Connection**: status cards (MCP server, MCP Adapter, OAuth, tools enabled), the MCP server URL with a copy button, a Settings panel (MCP server switch, OAuth switch, Server URL, minimum capability, authentication method) with a Save button in the header and at the bottom, Application password / Connected apps, step-by-step setup per AI client, and the OAuth debug endpoints.
-- **Tools**: tool groups as switches (with tool counts) and a searchable, filterable list of every tool.
-Styles and script: `assets/admin.css`, `assets/admin.js` (loaded only on this screen). Icon: `WPMCP_Admin::ICON_PATH` (also `assets/icon.svg`).
-
-## Uploading local files (v0.3)
-
-- **Upload link** (`create-upload-session`): returns a secret `upload_url`, valid for 5–60 minutes and limited to N files. It closes after the first successful submit unless `multiple_submits` is true. You can open the link in a browser or in browser automation (e.g. Playwright `setInputFiles('input[name="files[]"]', [...])`) and press **Upload**. You can also POST `multipart/form-data` with `files[]` to `json_endpoint`. Then `get-upload-session` returns the attachment IDs. Files are saved as the user who created the link, and WordPress's allowed file types apply. The link returns 404 when MCP or the Media group is off.
-- **Chunked base64** (`upload-media-chunk`): the first call sends `filename` + `data` and returns an `upload_id`. The next calls send `upload_id` + `data`. The last call sends `done: true`. This suits small files when no browser or HTTP client is available. Partial files live in `uploads/wpmcp-tmp/` (denied by `.htaccess`) and are purged daily.
-- Use `upload-media` with `url` when the file is already on a public URL.
-
-## SCF/ACF value shape
-
-`get-fields` (mode `raw`) and `update-fields` use the same name-keyed shape:
-
-```json
-{
-  "hero_title": "Text",
-  "hero_image": 123,
-  "cta": { "text": "Contact", "url": "https://..." },
-  "features": [ { "title": "Fast", "desc": "..." } ],
-  "sections": [ { "acf_fc_layout": "text_block", "heading": "..." } ]
-}
-```
-
-- Repeater / flexible values **replace** all rows; a sub field missing from a row is cleared.
-- Group values are **merged** (sub fields you omit keep their value).
-- Targets: post ID, `"option"`, `"term_5"`, `"user_1"`.
-
-## Claude Desktop & local sites (v0.9.0)
-
-Cloud connectors (claude.ai) cannot reach `https://my-site.local`. Claude Desktop can instead start a small **local proxy** (`bin/wpmcp-proxy.cjs`, Node 18+, no dependencies) that forwards stdio to the site's MCP endpoint with Basic auth. In *Settings → WP MCP Tools → Connection → Claude Desktop*:
-
-- **Option A: one-click `.mcpb` extension.** Download, double-click. Claude Desktop asks for the site address, username and Application Password (stored by Claude Desktop; the password is **not** inside the file).
-- **Option B: config file.** Download `wpmcp-proxy.cjs`, then paste the generated JSON into `claude_desktop_config.json` and fix the path.
-- The proxy accepts self-signed HTTPS for `*.local`, `*.test`, `*.localhost`, `localhost`, `127.0.0.1` (others stay verified unless `WPMCP_INSECURE_TLS=1`), detects pretty/plain permalinks, reuses the MCP session, parses SSE replies and re-initializes if the session expires.
-- Env: `WP_URL`, `WP_USERNAME`, `WP_APP_PASSWORD`, optional `MCP_PROTOCOL_VERSION`, `WPMCP_INSECURE_TLS`, `MCP_LOG_FILE`.
-- Unverified: installing the `.mcpb` in a real Claude Desktop (manifest uses `user_config` per MCPB 0.3).
-
-## Plugin file safety (v0.8.0)
-
-Plugin code runs on every request, so this is stricter than theme files:
-
-- Both groups (`plugin-read`, `plugin-write`) are **off by default**.
-- Writes only touch plugins the owner ticks under *Tools → Editable plugins* (setting `editable_plugins`, filter `wpmcp_editable_plugins`). Reading works for any installed plugin once `plugin-read` is on.
-- **WP MCP Tools can never be written, edited or deleted** through MCP (checked by folder name and by real path, so symlink aliases do not help).
-- `realpath` containment inside `wp-content/plugins/<slug>`, symlinked files/folders refused, `..` blocked; text extensions only; `vendor/`, `node_modules/`, `.git/` and hidden files are read-only; max 2 MB per write.
-- Backup before every write/delete in `wp-content/wpmcp-backups/plugins/<slug>/` (last 20 per file); PHP lint, JSON lint; loopback check after PHP writes with automatic rollback on a fatal error; `expected_hash` conflict check.
-- The main plugin file and `uninstall.php` cannot be deleted. Needs `edit_plugins`, so `DISALLOW_FILE_EDIT` turns writes off.
-- Limit: the rollback check requests the home page only. A bug that breaks only wp-admin or one specific page is not detected; restore with `restore-plugin-backup`.
-
-## Theme file safety
-
-- Only the active theme and its parent (filter `wpmcp_allowed_themes`).
-- `realpath` checks block `..` and symlink escapes; only text extensions can be written.
-- Each write/edit/delete is backed up to `wp-content/wpmcp-backups/<theme>/` (last 20 per file, Apache access denied via `.htaccess`; **on nginx, block this path manually**).
-- PHP is syntax-checked (`token_get_all(TOKEN_PARSE)`), JSON is validated.
-- After a PHP write, the home page is requested; on HTTP 500 / fatal error the change is rolled back automatically.
-- `DISALLOW_FILE_EDIT` disables all write tools. Writes need the `edit_themes` capability.
-
-## Code layout (v0.9.1)
-
-Theme and plugin file tools share one implementation, `includes/class-file-ops.php` (`WPMCP_File_Ops`): listing, reading, searching, hash check, lint, backups, atomic write and the loopback check with rollback. `class-theme.php` and `class-plugin-files.php` only hold their own policy (which folder is allowed, what can never be deleted) and call into it. Security hardening in this release: `X-Content-Type-Options: nosniff` on the upload route, and the diagnose loopback request now follows WordPress's `https_local_ssl_verify` filter.
-
-## Connection problems (v0.10)
-
-*MCP Tools → Connection → Connection check* runs a self-test from the admin screen (no MCP client needed): permalinks, MCP and OAuth endpoints, security plugins, Cloudflare hints, and which plugin rejects REST requests from logged-out clients (found by running the callbacks plugins hooked to `rest_authentication_errors`, `rest_pre_dispatch` and `rest_endpoints`). It also lists the last requests that reached WordPress (time, endpoint, HTTP status, kind of credentials; no IP address or secrets): if a connector fails and nothing new appears there, the request was stopped before WordPress. It cannot see a firewall or CDN that answers before WordPress runs; it prints `curl` commands to test those from outside. The same checks are available to MCP clients as the `diagnose` tool.
-
-## Automatic updates (v0.9.5)
-
-The plugin turns on WordPress auto-updates for itself (switch in *Connection → Settings → Automatic updates*). WordPress checks twice a day, so this needs WP-Cron or a real cron. Other plugins are never touched.
-
-## Extending
+Extend with your own tools:
 
 ```php
 add_action( 'wpmcp_register_tools', function () {
@@ -184,4 +62,149 @@ add_action( 'wpmcp_register_tools', function () {
 } );
 ```
 
-Filters: `wpmcp_allowed_themes`, `wpmcp_protected_options`.
+Filters: `wpmcp_allowed_themes`, `wpmcp_editable_plugins`, `wpmcp_protected_options`.
+
+## Connection problems
+
+*MCP Tools → Connection → Connection check* runs a self-test from the admin screen, so it works even when no client can connect:
+
+- Permalinks, HTTPS, the MCP route (must answer `401` with `WWW-Authenticate` when logged out), OAuth discovery and registration endpoints, security plugins, Cloudflare hints, URL mismatch.
+- **Which plugin rejects REST requests.** The check runs the callbacks other plugins attached to `rest_authentication_errors`, `rest_pre_dispatch` and `rest_endpoints` as a logged-out visitor, and names the first plugin that rejects the request. Those callbacks really run, so run it deliberately.
+- **Recent requests that reached WordPress** (time, endpoint, HTTP status, kind of credentials, shortened User-Agent; no IP address and never a secret). If a connector fails and nothing new is listed, the request was stopped *before* WordPress: Cloudflare, a WAF or the host firewall. If it is listed with 401 or 403, the cause is inside WordPress.
+
+The same checks are available to MCP clients as the `diagnose` tool. Limit: a firewall or CDN that answers before WordPress runs is invisible to the plugin; the result prints `curl` commands to test from another network.
+
+## Claude Desktop and local sites
+
+Cloud connectors cannot reach `https://my-site.local`. Claude Desktop can instead start a small **local proxy** (`bin/wpmcp-proxy.cjs`, Node 18+, no dependencies) that forwards stdio to the site's MCP endpoint with Basic auth. See *Connection → Claude Desktop*:
+
+- **Option A: one-click `.mcpb` extension.** Download, double-click. Claude Desktop asks for the site address, username and Application Password (kept by Claude Desktop; the password is **not** inside the file).
+- **Option B: config file.** Download `wpmcp-proxy.cjs`, paste the generated JSON into `claude_desktop_config.json` and fix the path.
+- Self-signed HTTPS is accepted only for `*.local`, `*.test`, `*.localhost`, `localhost` and `127.0.0.1`; other hosts stay verified unless you set `WPMCP_INSECURE_TLS=1`.
+- Environment: `WP_URL`, `WP_USERNAME`, `WP_APP_PASSWORD`, optional `MCP_PROTOCOL_VERSION`, `WPMCP_INSECURE_TLS`, `MCP_LOG_FILE`.
+
+This add-on is optional and removable (one class, one script).
+
+## OAuth endpoints
+
+| Endpoint | URL |
+|---|---|
+| Protected resource metadata (RFC 9728) | `/.well-known/oauth-protected-resource/wp-json/wp-mcp-tools/mcp` |
+| Authorization server metadata (RFC 8414) | `/.well-known/oauth-authorization-server` |
+| Dynamic client registration (RFC 7591) | `/wpmcp-oauth/register` |
+| Authorize (login and consent, PKCE S256 required) | `/wpmcp-oauth/authorize` |
+| Token (authorization_code, refresh_token with rotation) | `/wpmcp-oauth/token` |
+| Revoke (RFC 7009) | `/wpmcp-oauth/revoke` |
+
+An unauthenticated MCP request gets `401` with `WWW-Authenticate: Bearer resource_metadata="…"`. Access tokens last 1 hour, refresh tokens 30 days. Codes, tokens and client secrets are stored as SHA-256 hashes, and tokens are accepted only on the MCP route.
+
+## File editing safety
+
+**Theme files** (group `theme-write`):
+
+- Only the active theme and its parent (filter `wpmcp_allowed_themes`).
+- `realpath` checks block `..` and symlink escapes; only text file types can be written.
+- Every write, edit and delete is backed up to `wp-content/wpmcp-backups/<theme>/` (last 20 per file; Apache access denied by `.htaccess`; **on nginx, block this path yourself**).
+- PHP is syntax-checked without being run (`token_get_all` with `TOKEN_PARSE`), JSON is validated.
+- After a PHP write the home page is requested; on HTTP 500 or a fatal error the change is rolled back automatically.
+- `expected_hash` detects that a file changed since it was read. `DISALLOW_FILE_EDIT` turns every write tool off; writes need `edit_themes`.
+
+**Plugin files** (groups `plugin-read` and `plugin-write`, both **off** by default). Plugin code runs on every request, so the rules are stricter:
+
+- Writes only touch plugins you tick under *Tools → Editable plugins* (setting `editable_plugins`, filter `wpmcp_editable_plugins`). Reading works for any installed plugin once `plugin-read` is on.
+- **WP MCP Tools itself can never be written, edited or deleted** through MCP (checked by folder name and by real path, so symlink aliases do not help).
+- `realpath` containment inside `wp-content/plugins/<slug>`, symlinks refused, text file types only, `vendor/`, `node_modules/`, `.git/` and hidden files are read-only, 2 MB per write.
+- Backups in `wp-content/wpmcp-backups/plugins/<slug>/`, PHP and JSON lint, rollback on a fatal error, conflict check. The main plugin file and `uninstall.php` cannot be deleted. Needs `edit_plugins`.
+- Limit: the rollback check requests the home page only. A bug that breaks only wp-admin or one page is not detected; use `restore-plugin-backup`.
+
+Both use one shared implementation, `includes/class-file-ops.php`.
+
+## Plugin and theme management (group `manage`, off)
+
+Activate, deactivate, install (wordpress.org slug only, no arbitrary zip URLs), update and delete plugins; switch, install and update themes. WP MCP Tools cannot deactivate, delete or update itself through this group; a fatal error after activate or switch is rolled back.
+
+## Elementor
+
+`includes/integrations/class-elementor.php` bridges **Elementor's built-in MCP module** (Elementor 4.3+; Pro adds site parts). It does not re-implement builder logic: Elementor's abilities are registered with Elementor's own code and added to the WP MCP Tools server, so one connection covers WordPress, SCF/ACF and Elementor.
+
+**Limitation:** Elementor's builder tools are gated to the **Atomic Editor (V4)**. Classic (V3) widgets such as Form, Image and Heading are mostly out of reach, so on sites built with V3 widgets some changes still have to be made in the Elementor editor. WP MCP Tools does not add its own V3 editing tools.
+
+Switch it off under *Tools → Elementor*. If Elementor is not active, the group shows "Unavailable".
+
+## Uploading local files
+
+- **Upload link** (`create-upload-session`): returns a secret `upload_url`, valid 5 to 60 minutes and limited to N files; it closes after the first successful submit unless `multiple_submits` is true. Open it in a browser or let browser automation send the bytes, so large files never pass through the chat.
+- **Chunked base64** (`upload-media-chunk`): for small files when no browser or HTTP client is available.
+- `upload-media` with `url` imports a file that is already on a public URL.
+
+## SCF/ACF value shape
+
+`get-fields` (mode `raw`) and `update-fields` use the same name-keyed shape:
+
+```json
+{
+  "hero_title": "Text",
+  "hero_image": 123,
+  "cta": { "text": "Contact", "url": "https://..." },
+  "features": [ { "title": "Fast", "desc": "..." } ],
+  "sections": [ { "acf_fc_layout": "text_block", "heading": "..." } ]
+}
+```
+
+Repeater and flexible values **replace** all rows (a sub field missing from a row is cleared); group values are **merged**. Targets: post ID, `"option"`, `"term_5"`, `"user_1"`.
+
+## Updates
+
+- The plugin header `Update URI: https://github.com/haitruonginfotech/wp-mcp-tools` and `includes/class-updater.php` make WordPress read the latest **GitHub Release** (public API, no token, cached 6 hours). Only the built `wp-mcp-tools-X.Y.Z.zip` asset (it contains `vendor/`) is offered, and only from `github.com`.
+- **Automatic updates (v0.9.5+):** the plugin turns on WordPress auto-updates for itself (*Connection → Settings → Automatic updates*, default on). WordPress checks twice a day, so this needs WP-Cron or a real cron. Other plugins are never touched. Turn it off to update by clicking *Update now*.
+- Opening *Plugins* re-checks for updates when this plugin is missing from WordPress' list, for example right after a manual zip upload (at most once an hour). *Dashboard → Updates → Check again*, or `plugins.php?force-check=1`, forces a check.
+- Sites older than v0.9.5 have none of this: install a newer zip once by hand.
+- Tool `get-update-status` shows the installed version, the latest release, whether WordPress auto-updates the plugin, and the update history with its source (`auto`, `manual-click`, `manual-admin`, `manual-upload`, `wp-cli`, `detected`).
+- Repository override for a fork: `define( 'WPMCP_UPDATE_REPO', 'owner/repo' );`. Disable completely: `define( 'WPMCP_DISABLE_UPDATER', true );`.
+
+## Bundled MCP Adapter
+
+`vendor/` is committed and shipped (`wordpress/mcp-adapter`, `wordpress/php-mcp-schema`, `automattic/jetpack-autoloader`). Upstream marks bundling the adapter as deprecated since 0.7.0; if a future version breaks it, install the standalone MCP Adapter plugin, which wins when it is newer. A GitHub workflow checks for new adapter releases every Monday, runs `tests/e2e.sh` and, if it passes, publishes a patch release automatically; otherwise it opens a pull request.
+
+## Security
+
+- Every tool checks a WordPress capability; the endpoint itself needs a signed-in user with at least the capability set in *Settings → Minimum capability*.
+- OAuth: PKCE S256 is required, refresh tokens rotate, tokens are bound to the MCP route (a leaked token does not work against the rest of the REST API), and only hashes are stored.
+- Risky groups (`plugin-read`, `plugin-write`, `manage`) are off by default, and file writes honour `DISALLOW_FILE_EDIT`.
+- The option that stores this plugin's settings is protected from `update-options`, so a client cannot switch groups back on by itself.
+- No telemetry. Outbound requests: the update check to `api.github.com`, what you ask tools to do (installing from wordpress.org, importing a media URL), and loopback checks to your own site.
+- Report vulnerabilities privately to the maintainer (Hai Truong IT) instead of in a public issue.
+
+## Development
+
+- Tests: `bash tests/e2e.sh` (needs PHP, the WordPress zip and the SQLite Database Integration zip); it installs a throw-away site and runs every test script.
+- Release: bump `Version:` and `WPMCP_VERSION`, commit, push the tag `vX.Y.Z` (must match `WPMCP_VERSION`); `.github/workflows/release.yml` attaches `wp-mcp-tools-X.Y.Z.zip`.
+- Local zip: `git archive --format=zip --prefix=wp-mcp-tools/ -o wp-mcp-tools-X.Y.Z.zip HEAD`.
+- Versioning: patch (0.9.1) for fixes, minor (0.10.0) for features, major (1.0.0) for milestones. Every release is a git tag. Features live in their own class and file so they can be removed (see `AI/DECISIONS.md`).
+
+## Changelog
+
+| Version | Date | Changes |
+|---|---|---|
+| 0.10.3 | 2026-10-30 | **Security release, update recommended.** An OAuth access token could reach the whole REST API through a `rest_route` value in a POST body; it is now confined to the MCP route. Also: publishing and author changes check the user's capabilities, protected post meta needs `edit_post_meta`, password-protected and non-public posts are not readable by low-privilege users, taxonomy tools check per-taxonomy capabilities, protected-option and secret-option checks are case-insensitive and cover `user_roles`, and the updater only accepts a zip from this repository's release downloads. |
+| 0.10.2 | 2026-10-30 | Connection check lists the last MCP and OAuth requests that reached WordPress; `diagnose` reports when the last one arrived. |
+| 0.10.1 | 2026-10-30 | Names the plugin that rejects REST requests (shown in Connection check and `diagnose`). |
+| 0.10.0 | 2026-10-30 | New **Connection check** panel: run the self-test from the admin screen, without an MCP client. |
+| 0.9.5 | 2026-10-30 | The plugin turns on auto-updates for itself (switch in Connection); the twice-daily WordPress check always asks GitHub. |
+| 0.9.4 | 2026-10-28 | Fix: after a manual zip upload the plugin vanished from WordPress' update list for up to 12 hours; opening *Plugins* now re-checks. |
+| 0.9.3 | 2026-10-28 | Claude Desktop panel moved below *Connect your AI client*. |
+| 0.9.2 | 2026-10-28 | Fix: unreadable text on link-style buttons such as *Download .mcpb*. |
+| 0.9.1 | 2026-10-28 | Theme and plugin file tools share one implementation. `nosniff` on the upload route, diagnose loopback honours `https_local_ssl_verify`, `.mcpb` builder fix for command-line contexts, wording cleanup, new tests. |
+| 0.9.0 | 2026-10-28 | **Claude Desktop and local sites:** stdio proxy, one-click `.mcpb` extension, config snippet. |
+| 0.8.0 | 2026-10-28 | **Plugin file tools** (`plugin-read`, `plugin-write`, off by default, allowlist of editable plugins). |
+| 0.7.1 | 2026-10-27 | Redesigned sign-in, error and upload pages (dark mode, mobile). |
+| 0.7.0 | 2026-10-27 | `get-update-status` and update history, `diagnose`, `manage` group (off by default). Fix: a capability string equal to a PHP function name was called as a function. |
+| 0.6.0 | 2026-10-23 | **Elementor bridge:** Elementor 4.x's own MCP abilities on the same server. |
+| 0.5.0 | 2026-10-23 | **Self-update from GitHub Releases**; weekly automatic MCP Adapter releases. |
+| 0.4.0 | 2026-10-22 | **MCP Adapter 0.7.1 bundled**: one plugin to install. |
+| 0.3.1 | 2026-10-14 | Admin screen redesign and new icon. |
+| 0.3.0 | 2026-10 | Local file uploads (upload link, chunked base64). |
+| 0.2.0 | 2026-09 | **OAuth 2.1 server** (discovery, dynamic registration, PKCE, refresh rotation), Application Password generator, top-level admin menu. |
+| 0.1.0 | 2026-09 | First version: content, taxonomy, SCF/ACF, media, menu, option and theme-file tools; dedicated MCP server. |
+
+Dates for 0.1.0 to 0.3.0 are approximate.

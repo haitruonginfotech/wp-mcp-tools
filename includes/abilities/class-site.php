@@ -175,11 +175,26 @@ class WPMCP_Site {
 		);
 	}
 
+	/** Option names that hold credentials; never returned. */
+	private static function is_secret_option( string $name ): bool {
+		return (bool) preg_match( '/(key|salt|password|passwd|secret|token|credential)/i', $name )
+			|| in_array( strtolower( $name ), array( 'wpmcp_oauth_clients', 'wpmcp_oauth_tokens', 'wpmcp_settings' ), true );
+	}
+
+	/** Case-insensitive protected-option check (option names are case-insensitive in MySQL). */
+	private static function is_protected_option( string $name, array $protected ): bool {
+		global $wpdb;
+		$protected   = array_map( 'strtolower', $protected );
+		$protected[] = strtolower( $wpdb->prefix . 'user_roles' );
+		$protected[] = strtolower( $wpdb->base_prefix . 'user_roles' );
+		return in_array( strtolower( $name ), $protected, true );
+	}
+
 	public static function get_options( array $input ): array {
 		$out = array();
 		foreach ( (array) $input['names'] as $name ) {
 			$name = (string) $name;
-			if ( preg_match( '/(_key|_salt|password|secret|token)$/i', $name ) ) {
+			if ( self::is_secret_option( $name ) ) {
 				$out[ $name ] = '[hidden]';
 				continue;
 			}
@@ -201,7 +216,7 @@ class WPMCP_Site {
 		$result = array();
 		foreach ( $options as $name => $value ) {
 			$name = (string) $name;
-			if ( in_array( $name, $protected, true ) ) {
+			if ( self::is_protected_option( $name, $protected ) ) {
 				$result[ $name ] = array( 'updated' => false, 'error' => 'protected option' );
 				continue;
 			}

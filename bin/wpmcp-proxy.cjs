@@ -15,7 +15,7 @@
  *   WPMCP_INSECURE_TLS    "1" = accept any certificate (hosts *.local, *.test, *.localhost, localhost, 127.0.0.1 always do).
  *   MCP_LOG_FILE      Optional path for a debug log (stderr is used otherwise, errors only).
  *
- * @version 0.10.2
+ * @version 0.10.3
  */
 'use strict';
 
@@ -24,7 +24,7 @@ const https = require('https');
 const fs = require('fs');
 const readline = require('readline');
 
-const VERSION = '0.10.2';
+const VERSION = '0.10.3';
 const UA = 'wpmcp-proxy/' + VERSION + ' (+https://github.com/haitruonginfotech/wp-mcp-tools)';
 const REST_PATH = '/wp-mcp-tools/mcp';
 

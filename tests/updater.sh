@@ -14,7 +14,7 @@ add_filter( 'pre_http_request', function ( $pre, $args, $url ) {
 			'headers'  => array(),
 			'body'     => wp_json_encode( array(
 				'tag_name' => 'v9.9.9', 'html_url' => 'https://github.com/x/y/releases/tag/v9.9.9', 'body' => '',
-				'assets'   => array( array( 'name' => 'wp-mcp-tools-9.9.9.zip', 'browser_download_url' => 'https://github.com/x/y/releases/download/v9.9.9/wp-mcp-tools-9.9.9.zip' ) ),
+				'assets'   => array( array( 'name' => 'wp-mcp-tools-9.9.9.zip', 'browser_download_url' => 'https://github.com/haitruonginfotech/wp-mcp-tools/releases/download/v9.9.9/wp-mcp-tools-9.9.9.zip' ) ),
 			) ),
 		);
 	}

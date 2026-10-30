@@ -199,6 +199,9 @@ class WPMCP_Taxonomies {
 		if ( ! taxonomy_exists( $tax ) ) {
 			return WPMCP_Helpers::error( 'invalid_taxonomy', 'Unknown taxonomy: ' . $tax );
 		}
+		if ( ! current_user_can( get_taxonomy( $tax )->cap->edit_terms ) ) {
+			return WPMCP_Helpers::error( 'forbidden', 'You cannot create terms in ' . $tax, 403 );
+		}
 		$args = self::term_args( $input );
 		unset( $args['name'] );
 		$res = wp_insert_term( (string) $input['name'], $tax, $args );
@@ -213,6 +216,9 @@ class WPMCP_Taxonomies {
 	 */
 	public static function update_term( array $input ) {
 		$tax = (string) $input['taxonomy'];
+		if ( ! taxonomy_exists( $tax ) || ! current_user_can( 'edit_term', absint( $input['id'] ) ) ) {
+			return WPMCP_Helpers::error( 'forbidden', 'You cannot edit this term.', 403 );
+		}
 		$res = wp_update_term( absint( $input['id'] ), $tax, self::term_args( $input ) );
 		if ( is_wp_error( $res ) ) {
 			return $res;
@@ -224,6 +230,9 @@ class WPMCP_Taxonomies {
 	 * @return array|WP_Error
 	 */
 	public static function delete_term( array $input ) {
+		if ( ! taxonomy_exists( (string) $input['taxonomy'] ) || ! current_user_can( 'delete_term', absint( $input['id'] ) ) ) {
+			return WPMCP_Helpers::error( 'forbidden', 'You cannot delete this term.', 403 );
+		}
 		$res = wp_delete_term( absint( $input['id'] ), (string) $input['taxonomy'] );
 		if ( is_wp_error( $res ) ) {
 			return $res;
@@ -263,7 +272,10 @@ class WPMCP_Taxonomies {
 			return WPMCP_Helpers::error( 'invalid_taxonomy', 'Unknown taxonomy: ' . $taxonomy );
 		}
 		$tax_obj = get_taxonomy( $taxonomy );
-		$ids     = array();
+		if ( ! current_user_can( $tax_obj->cap->assign_terms ) ) {
+			return WPMCP_Helpers::error( 'forbidden', 'You cannot assign terms in ' . $taxonomy, 403 );
+		}
+		$ids = array();
 		foreach ( $terms as $term ) {
 			if ( is_numeric( $term ) ) {
 				$ids[] = (int) $term;
@@ -275,7 +287,7 @@ class WPMCP_Taxonomies {
 			}
 			if ( $found ) {
 				$ids[] = (int) $found->term_id;
-			} elseif ( ! $tax_obj->hierarchical ) {
+			} elseif ( ! $tax_obj->hierarchical && current_user_can( $tax_obj->cap->edit_terms ) ) {
 				$new = wp_insert_term( (string) $term, $taxonomy );
 				if ( ! is_wp_error( $new ) ) {
 					$ids[] = (int) $new['term_id'];
