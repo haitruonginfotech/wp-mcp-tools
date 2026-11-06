@@ -178,6 +178,10 @@ Each connection has an access level, set in *MCP Tools → Connection → Connec
 
 A level can only take rights away; WordPress capability checks still apply. Elementor tools count as writes below Full, except those Elementor marks read-only. `get-site-info` reports the level in force.
 
+## Activity log
+
+*MCP Tools → Connection → Activity* lists the last 30 changes AI connections made: when, which app or Application Password, which tool, the target (an ID or name) and the result (`ok`, `error`, `refused`). Calls an access level stopped are listed as `refused`. Reading is not logged, and neither tool input, content, IP addresses nor credentials are stored (200 rows kept). The same list is available to an administrator's AI through the `list-activity` tool.
+
 ## Security
 
 - Every tool checks a WordPress capability; the endpoint itself needs a signed-in user with at least the capability set in *Settings → Minimum capability*.
@@ -200,6 +204,7 @@ A level can only take rights away; WordPress capability checks still apply. Elem
 
 | Version | Date | Changes |
 |---|---|---|
+| 0.12.0 | 2026-11-06 | Activity log: every change an AI connection makes (and every call an access level refused) is listed in the admin and through the new `list-activity` tool. No content, input or IP is stored. |
 | 0.11.1 | 2026-11-06 | Rate limit per connection (default 120 tool calls a minute, adjustable, `0` = off). `update-options` gets `dry_run` and no longer returns old or new values of secret-looking options. |
 | 0.11.0 | 2026-11-06 | Access levels per connection: Full, Read-only or Drafts only, set per OAuth app and as a default for Application Passwords. Drafts only lets an AI write drafts, uploads and terms but not publish, delete or touch live content, menus, options, themes or plugins. `get-site-info` reports the level. |
 | 0.10.6 | 2026-11-06 | Connection check names plugins that answer the sign-in discovery document (`/.well-known/oauth-authorization-server`) instead of WP MCP Tools, and lists other active MCP-related plugins. Such a conflict makes a client sign in somewhere else and then fail with "Authorization failed". |

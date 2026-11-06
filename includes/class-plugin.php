@@ -23,6 +23,7 @@ class WPMCP_Plugin {
 		'WPMCP_Manage',
 		'WPMCP_Diagnose',
 		'WPMCP_Elementor',
+		'WPMCP_Activity',
 	);
 
 	public static function init(): void {

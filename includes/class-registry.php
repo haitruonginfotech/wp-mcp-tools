@@ -129,6 +129,13 @@ class WPMCP_Registry {
 	/**
 	 * Hook: wp_abilities_api_init.
 	 */
+	/** Optional add-on (class-activity.php): note a write in the activity log. */
+	private static function log_activity( string $slug, array $def, array $input, $result ): void {
+		if ( class_exists( 'WPMCP_Activity' ) ) {
+			WPMCP_Activity::record( $slug, $def, $input, $result );
+		}
+	}
+
 	public static function register_abilities(): void {
 		$expose_default = WPMCP_Settings::get( 'expose_default_server' );
 
@@ -160,16 +167,23 @@ class WPMCP_Registry {
 					'execute_callback'    => static function ( $input = null ) use ( $callback, $slug, $def ) {
 						$input = is_array( $input ) ? $input : array();
 						if ( class_exists( 'WPMCP_Access' ) ) {
-							$refused = WPMCP_Access::rate_check() ?? WPMCP_Access::check( $slug, $def, $input );
+							$limited = WPMCP_Access::rate_check();
+							if ( $limited ) {
+								return $limited;
+							}
+							$refused = WPMCP_Access::check( $slug, $def, $input );
 							if ( $refused ) {
+								self::log_activity( $slug, $def, $input, $refused );
 								return $refused;
 							}
 						}
 						try {
-							return call_user_func( $callback, $input );
+							$result = call_user_func( $callback, $input );
 						} catch ( \Throwable $e ) {
-							return new WP_Error( 'wpmcp_exception', $e->getMessage() );
+							$result = new WP_Error( 'wpmcp_exception', $e->getMessage() );
 						}
+						self::log_activity( $slug, $def, $input, $result );
+						return $result;
 					},
 					'permission_callback' => static function ( $input = null ) use ( $capability ) {
 						$input = is_array( $input ) ? $input : array();

@@ -178,6 +178,10 @@ Mỗi kết nối có một mức truy cập, đặt ở *MCP Tools → Connecti
 
 Mức truy cập chỉ có thể bớt quyền, các kiểm tra capability của WordPress vẫn áp dụng. Tool Elementor bị coi là ghi khi mức thấp hơn Full, trừ tool Elementor đánh dấu chỉ đọc. `get-site-info` cho biết mức đang áp dụng.
 
+## Nhật ký hoạt động
+
+*MCP Tools → Connection → Activity* liệt kê 30 thay đổi gần nhất mà kết nối AI đã làm: lúc nào, app hoặc Application Password nào, tool nào, đối tượng (ID hoặc tên) và kết quả (`ok`, `error`, `refused`). Lệnh bị mức truy cập chặn hiện là `refused`. Việc đọc không được ghi, và không lưu nội dung, dữ liệu gửi vào tool, địa chỉ IP hay thông tin đăng nhập (giữ tối đa 200 dòng). Quản trị viên cũng xem được danh sách này qua tool `list-activity`.
+
 ## Bảo mật
 
 - Mọi tool đều kiểm tra một quyền (capability) của WordPress; bản thân endpoint cần người dùng đã đăng nhập có ít nhất quyền đặt ở *Settings → Minimum capability*.
@@ -200,6 +204,7 @@ Mức truy cập chỉ có thể bớt quyền, các kiểm tra capability của
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.12.0 | 2026-11-06 | Nhật ký hoạt động: mọi thay đổi do kết nối AI thực hiện (và mọi lệnh bị mức truy cập chặn) được liệt kê trong admin và qua tool mới `list-activity`. Không lưu nội dung, dữ liệu gửi vào hay IP. |
 | 0.11.1 | 2026-11-06 | Giới hạn tần suất theo kết nối (mặc định 120 lần gọi tool mỗi phút, chỉnh được, `0` = tắt). `update-options` có thêm `dry_run` và không còn trả giá trị cũ/mới của option có tên giống bí mật. |
 | 0.11.0 | 2026-11-06 | Mức truy cập theo từng kết nối: Full, Read-only hoặc Drafts only, đặt cho từng app OAuth và mặc định cho Application Password. Drafts only cho AI ghi bản nháp, tải media, term nhưng không xuất bản, xoá hay động vào nội dung đang public, menu, options, theme, plugin. `get-site-info` báo mức đang áp dụng. |
 | 0.10.6 | 2026-11-06 | Connection check nêu tên plugin đang trả lời tài liệu đăng nhập (`/.well-known/oauth-authorization-server`) thay cho WP MCP Tools, và liệt kê các plugin MCP khác đang bật. Xung đột này khiến client đăng nhập ở chỗ khác rồi báo "Authorization failed". |
