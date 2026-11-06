@@ -515,6 +515,14 @@ class WPMCP_Admin {
 					</div>
 				</div>
 
+				<div class="wpmcp-row">
+					<div class="wpmcp-row__text">
+						<h3><label for="wpmcp-rate-limit">Rate limit</label></h3>
+						<p>Most tool calls one connection may make per minute. A runaway AI loop then stops by itself instead of hammering the site. <code>0</code> turns the limit off.</p>
+					</div>
+					<div class="wpmcp-row__ctl"><input id="wpmcp-rate-limit" class="wpmcp-input" type="number" min="0" max="6000" step="1" name="<?php echo esc_attr( $opt ); ?>[rate_limit]" value="<?php echo esc_attr( (string) WPMCP_Access::rate_limit() ); ?>"></div>
+				</div>
+
 				<div class="wpmcp-row wpmcp-row--stack">
 					<div class="wpmcp-row__text">
 						<h3><label for="wpmcp-public-url">Server URL</label></h3>

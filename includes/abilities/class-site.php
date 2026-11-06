@@ -66,8 +66,11 @@ class WPMCP_Site {
 			'update-options',
 			array(
 				'label'       => 'Update options',
-				'description' => 'Update wp_options values. Pass {"options": {"blogname": "My Site", "page_on_front": 12}}. Critical options (siteurl, home, active_plugins, template, stylesheet, roles, keys...) are refused.',
-				'properties'  => array( 'options' => $h::s_obj( 'Map of option name => new value.' ) ),
+				'description' => 'Update wp_options values. Pass {"options": {"blogname": "My Site", "page_on_front": 12}}. Critical options (siteurl, home, active_plugins, template, stylesheet, roles, keys...) are refused. Pass "dry_run": true to see old and new values without saving anything.',
+				'properties'  => array(
+					'options' => $h::s_obj( 'Map of option name => new value.' ),
+					'dry_run' => array( 'type' => 'boolean', 'description' => 'Preview only: report what would change, save nothing.' ),
+				),
 				'required'    => array( 'options' ),
 				'capability'  => 'manage_options',
 				'idempotent'  => true,
@@ -210,6 +213,7 @@ class WPMCP_Site {
 	public static function update_options( array $input ) {
 		$protected = (array) apply_filters( 'wpmcp_protected_options', self::PROTECTED_OPTIONS );
 		$options   = (array) $input['options'];
+		$dry       = ! empty( $input['dry_run'] );
 		if ( ! $options ) {
 			return WPMCP_Helpers::error( 'empty', 'No options given.' );
 		}
@@ -221,12 +225,23 @@ class WPMCP_Site {
 				$result[ $name ] = array( 'updated' => false, 'error' => 'protected option' );
 				continue;
 			}
-			$old = get_option( $name, null );
+			$old    = get_option( $name, null );
+			$secret = self::is_secret_option( $name );
+			if ( $dry ) {
+				$result[ $name ] = array(
+					'updated' => false,
+					'dry_run' => true,
+					'old'     => $secret ? '[hidden]' : $old,
+					'new'     => $secret ? '[hidden]' : $value,
+					'changes' => $old !== $value,
+				);
+				continue;
+			}
 			update_option( $name, $value );
 			$result[ $name ] = array(
 				'updated' => true,
-				'old'     => $old,
-				'new'     => get_option( $name ),
+				'old'     => $secret ? '[hidden]' : $old,
+				'new'     => $secret ? '[hidden]' : get_option( $name ),
 			);
 		}
 		return $result;

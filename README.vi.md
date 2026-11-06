@@ -182,6 +182,8 @@ Mức truy cập chỉ có thể bớt quyền, các kiểm tra capability của
 
 - Mọi tool đều kiểm tra một quyền (capability) của WordPress; bản thân endpoint cần người dùng đã đăng nhập có ít nhất quyền đặt ở *Settings → Minimum capability*.
 - OAuth: bắt buộc PKCE S256, refresh token xoay vòng, token gắn với route MCP (token bị lộ không dùng được với phần REST API còn lại), chỉ lưu hash.
+- Giới hạn tần suất: mỗi kết nối tối đa 120 lần gọi tool mỗi phút theo mặc định (*Settings → Rate limit*, `0` = tắt), nên vòng lặp AI chạy mất kiểm soát sẽ tự dừng.
+- `update-options` nhận `dry_run: true` để xem trước thay đổi mà không lưu, và không bao giờ trả lại giá trị của option có tên giống bí mật.
 - Các nhóm rủi ro (`plugin-read`, `plugin-write`, `manage`) tắt theo mặc định, và việc ghi file tuân theo `DISALLOW_FILE_EDIT`.
 - Option lưu cài đặt của plugin được bảo vệ khỏi `update-options`, nên client không tự bật lại nhóm đã tắt.
 - Không có telemetry. Request ra ngoài: kiểm tra cập nhật tới `api.github.com`, việc bạn nhờ các tool làm (cài từ wordpress.org, nhập media từ URL) và các kiểm tra loopback tới chính site.
@@ -198,6 +200,7 @@ Mức truy cập chỉ có thể bớt quyền, các kiểm tra capability của
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.11.1 | 2026-11-06 | Giới hạn tần suất theo kết nối (mặc định 120 lần gọi tool mỗi phút, chỉnh được, `0` = tắt). `update-options` có thêm `dry_run` và không còn trả giá trị cũ/mới của option có tên giống bí mật. |
 | 0.11.0 | 2026-11-06 | Mức truy cập theo từng kết nối: Full, Read-only hoặc Drafts only, đặt cho từng app OAuth và mặc định cho Application Password. Drafts only cho AI ghi bản nháp, tải media, term nhưng không xuất bản, xoá hay động vào nội dung đang public, menu, options, theme, plugin. `get-site-info` báo mức đang áp dụng. |
 | 0.10.6 | 2026-11-06 | Connection check nêu tên plugin đang trả lời tài liệu đăng nhập (`/.well-known/oauth-authorization-server`) thay cho WP MCP Tools, và liệt kê các plugin MCP khác đang bật. Xung đột này khiến client đăng nhập ở chỗ khác rồi báo "Authorization failed". |
 | 0.10.5 | 2026-10-30 | Sửa lỗi: các ô copy trong *Connect your AI client* hiện chữ sáng trên nền sáng nên không đọc được (từ 0.10.0). Các lệnh trong Connection check nay dùng kiểu riêng. |

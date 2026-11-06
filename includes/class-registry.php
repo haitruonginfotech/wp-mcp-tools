@@ -160,7 +160,7 @@ class WPMCP_Registry {
 					'execute_callback'    => static function ( $input = null ) use ( $callback, $slug, $def ) {
 						$input = is_array( $input ) ? $input : array();
 						if ( class_exists( 'WPMCP_Access' ) ) {
-							$refused = WPMCP_Access::check( $slug, $def, $input );
+							$refused = WPMCP_Access::rate_check() ?? WPMCP_Access::check( $slug, $def, $input );
 							if ( $refused ) {
 								return $refused;
 							}

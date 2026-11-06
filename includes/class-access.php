@@ -181,6 +181,43 @@ class WPMCP_Access {
 		return null;
 	}
 
+	/* ------------------------------------------------------------------ */
+	/* Rate limit                                                          */
+	/* ------------------------------------------------------------------ */
+
+	/** Requests per minute allowed per connection (0 = no limit). */
+	public static function rate_limit(): int {
+		return max( 0, (int) WPMCP_Settings::get( 'rate_limit' ) );
+	}
+
+	/**
+	 * Count one tool call for the current connection (or user) and refuse when the minute's budget is spent.
+	 * Fixed one-minute window kept in a transient; the cost is one option read and write per call.
+	 */
+	public static function rate_check(): ?WP_Error {
+		$limit = (int) apply_filters( 'wpmcp_rate_limit', self::rate_limit() );
+		if ( $limit <= 0 ) {
+			return null;
+		}
+		$who    = self::current_key() ?: 'user:' . get_current_user_id();
+		$key    = 'wpmcp_rl_' . md5( $who );
+		$window = (int) floor( time() / 60 );
+		$state  = get_transient( $key );
+		if ( ! is_array( $state ) || ( $state['w'] ?? 0 ) !== $window ) {
+			$state = array( 'w' => $window, 'n' => 0 );
+		}
+		++$state['n'];
+		set_transient( $key, $state, 120 );
+		if ( $state['n'] > $limit ) {
+			return new WP_Error(
+				'wpmcp_rate_limited',
+				sprintf( 'Too many requests: this connection may make %d tool calls per minute. Wait a minute and try again. An administrator can change the limit in MCP Tools → Settings → Rate limit.', $limit ),
+				array( 'status' => 429 )
+			);
+		}
+		return null;
+	}
+
 	private static function refuse( string $level, string $slug, string $why ): WP_Error {
 		return new WP_Error(
 			'wpmcp_access',

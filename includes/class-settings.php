@@ -50,6 +50,8 @@ class WPMCP_Settings {
 			'auto_update'           => 1,
 			// Access level for connections without their own setting: full, read-only or drafts-only.
 			'access_default'        => 'full',
+			// Tool calls per minute per connection. 0 = no limit.
+			'rate_limit'            => 120,
 		);
 	}
 
@@ -144,6 +146,7 @@ class WPMCP_Settings {
 		$out['auto_update']           = empty( $input['auto_update'] ) ? 0 : 1;
 		$level                        = class_exists( 'WPMCP_Access' ) ? WPMCP_Access::normalize( $input['access_default'] ?? '' ) : '';
 		$out['access_default']        = '' === $level ? $def['access_default'] : $level;
+		$out['rate_limit']            = min( 6000, max( 0, (int) ( $input['rate_limit'] ?? $def['rate_limit'] ) ) );
 
 		$cap                        = sanitize_key( $input['endpoint_capability'] ?? $def['endpoint_capability'] );
 		$out['endpoint_capability'] = in_array( $cap, self::CAPABILITIES, true ) ? $cap : $def['endpoint_capability'];

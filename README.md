@@ -182,6 +182,8 @@ A level can only take rights away; WordPress capability checks still apply. Elem
 
 - Every tool checks a WordPress capability; the endpoint itself needs a signed-in user with at least the capability set in *Settings → Minimum capability*.
 - OAuth: PKCE S256 is required, refresh tokens rotate, tokens are bound to the MCP route (a leaked token does not work against the rest of the REST API), and only hashes are stored.
+- Rate limit: each connection may make 120 tool calls per minute by default (*Settings → Rate limit*, `0` = off), so a runaway AI loop stops by itself.
+- `update-options` accepts `dry_run: true` to preview a change without saving, and never echoes the value of secret-looking options.
 - Risky groups (`plugin-read`, `plugin-write`, `manage`) are off by default, and file writes honour `DISALLOW_FILE_EDIT`.
 - The option that stores this plugin's settings is protected from `update-options`, so a client cannot switch groups back on by itself.
 - No telemetry. Outbound requests: the update check to `api.github.com`, what you ask tools to do (installing from wordpress.org, importing a media URL), and loopback checks to your own site.
@@ -198,6 +200,7 @@ A level can only take rights away; WordPress capability checks still apply. Elem
 
 | Version | Date | Changes |
 |---|---|---|
+| 0.11.1 | 2026-11-06 | Rate limit per connection (default 120 tool calls a minute, adjustable, `0` = off). `update-options` gets `dry_run` and no longer returns old or new values of secret-looking options. |
 | 0.11.0 | 2026-11-06 | Access levels per connection: Full, Read-only or Drafts only, set per OAuth app and as a default for Application Passwords. Drafts only lets an AI write drafts, uploads and terms but not publish, delete or touch live content, menus, options, themes or plugins. `get-site-info` reports the level. |
 | 0.10.6 | 2026-11-06 | Connection check names plugins that answer the sign-in discovery document (`/.well-known/oauth-authorization-server`) instead of WP MCP Tools, and lists other active MCP-related plugins. Such a conflict makes a client sign in somewhere else and then fail with "Authorization failed". |
 | 0.10.5 | 2026-10-30 | Fix: the copy boxes in *Connect your AI client* showed light text on a light background (since 0.10.0). The Connection check commands use their own style now. |
