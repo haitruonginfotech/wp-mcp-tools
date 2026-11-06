@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       WP MCP Tools
  * Description:       Registers WordPress abilities (posts, pages, CPT, taxonomies, SCF/ACF fields, media, menus, options, theme files) and exposes them as a dedicated MCP server through the bundled WordPress MCP Adapter, with OAuth 2.1 or Application Password sign-in.
- * Version:           0.13.0
+ * Version:           0.14.0
  * Requires at least: 6.9
  * Requires PHP:      7.4
  * Author:            Hai Truong IT
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WPMCP_VERSION', '0.13.0' );
+define( 'WPMCP_VERSION', '0.14.0' );
 define( 'WPMCP_FILE', __FILE__ );
 define( 'WPMCP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPMCP_URL', plugin_dir_url( __FILE__ ) );
@@ -58,6 +58,7 @@ require_once WPMCP_DIR . 'includes/class-oauth-conflicts.php';
 require_once WPMCP_DIR . 'includes/class-access.php';
 require_once WPMCP_DIR . 'includes/class-activity.php';
 require_once WPMCP_DIR . 'includes/class-undo.php';
+require_once WPMCP_DIR . 'includes/class-unlock.php';
 require_once WPMCP_DIR . 'includes/class-hit-log.php';
 require_once WPMCP_DIR . 'includes/abilities/class-diagnose.php';
 require_once WPMCP_DIR . 'includes/integrations/class-elementor.php';
@@ -80,5 +81,6 @@ register_deactivation_hook(
 	__FILE__,
 	static function () {
 		wp_clear_scheduled_hook( 'wpmcp_oauth_purge' );
+		delete_option( 'wpmcp_unlock_until' ); // Never leave a file-editing unlock behind.
 	}
 );

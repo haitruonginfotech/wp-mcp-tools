@@ -39,6 +39,7 @@ class WPMCP_Plugin {
 		WPMCP_Hit_Log::init(); // Optional add-on (v0.10.2).
 		WPMCP_Activity::init(); // Optional add-on (v0.12.0).
 		WPMCP_Undo::init(); // Optional add-on (v0.13.0).
+		WPMCP_Unlock::init(); // Optional add-on (v0.14.0).
 
 		foreach ( self::MODULES as $module ) {
 			$module::register();

@@ -186,6 +186,10 @@ A level can only take rights away; WordPress capability checks still apply. Elem
 
 **Alert.** When one connection is refused (access level or rate limit) 5 or more times within an hour, a warning appears in the WordPress admin for administrators, with a link to the Activity panel.
 
+## File editing lock (`DISALLOW_FILE_EDIT`)
+
+If the site sets `DISALLOW_FILE_EDIT` (in `wp-config.php` or a security plugin such as SiteGround Security), the theme and plugin file tools are off. *MCP Tools → Connection → File editing lock* lifts it for 1, 4 or 24 hours. Only MCP tool calls are affected; the dashboard editors stay locked. Nothing in wp-config.php or in the security plugin is changed, so when the time ends, when you press *Lock again now*, or when this plugin is deactivated or deleted, the site is exactly as it was. While unlocked a red notice shows on every admin screen, and unlocking and locking are written to the Activity list. The `theme-write` / `plugin-write` groups must still be on. `DISALLOW_FILE_MODS` (installing, updating, deleting plugins) is not affected.
+
 ## Security
 
 - Every tool checks a WordPress capability; the endpoint itself needs a signed-in user with at least the capability set in *Settings → Minimum capability*.
@@ -208,6 +212,7 @@ A level can only take rights away; WordPress capability checks still apply. Elem
 
 | Version | Date | Changes |
 |---|---|---|
+| 0.14.0 | 2026-11-06 | Temporary unlock of `DISALLOW_FILE_EDIT` for MCP file tools (1/4/24 hours), with a red admin notice, activity log entries and automatic relock; nothing in the security plugin or wp-config.php is changed. Deactivating clears the unlock; `uninstall.php` removes the add-on options. |
 | 0.13.0 | 2026-11-06 | Undo button in the Activity panel (posts, options, AI-created posts, trashed posts; refused if changed again since). Admin warning when one connection is refused 5+ times in an hour; rate-limit hits are logged once a minute. |
 | 0.12.0 | 2026-11-06 | Activity log: every change an AI connection makes (and every call an access level refused) is listed in the admin and through the new `list-activity` tool. No content, input or IP is stored. |
 | 0.11.1 | 2026-11-06 | Rate limit per connection (default 120 tool calls a minute, adjustable, `0` = off). `update-options` gets `dry_run` and no longer returns old or new values of secret-looking options. |

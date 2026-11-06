@@ -63,6 +63,13 @@ final class WPMCP_Activity {
 		);
 	}
 
+	/** Add a plain log row for something an administrator did (not an AI tool call). */
+	public static function note( string $tool, string $target, int $user_id ): void {
+		$rows = self::rows();
+		array_unshift( $rows, array( 't' => time(), 'conn' => '', 'user' => $user_id, 'tool' => $tool, 'target' => $target, 'result' => 'ok', 'code' => '' ) );
+		update_option( self::OPTION, array_slice( $rows, 0, self::KEEP ), false );
+	}
+
 	/** Flag a row as undone. */
 	public static function mark_undone( string $row_id ): void {
 		$rows = self::rows();

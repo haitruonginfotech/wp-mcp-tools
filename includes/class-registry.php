@@ -180,23 +180,34 @@ class WPMCP_Registry {
 								return $refused;
 							}
 						}
-						$snap = empty( $def['readonly'] ) && class_exists( 'WPMCP_Undo' ) ? WPMCP_Undo::capture( $slug, $input ) : null;
+						$snap   = empty( $def['readonly'] ) && class_exists( 'WPMCP_Undo' ) ? WPMCP_Undo::capture( $slug, $input ) : null;
+						$unlock = class_exists( 'WPMCP_Unlock' );
+						$unlock && WPMCP_Unlock::enter();
 						try {
 							$result = call_user_func( $callback, $input );
 						} catch ( \Throwable $e ) {
 							$result = new WP_Error( 'wpmcp_exception', $e->getMessage() );
+						} finally {
+							$unlock && WPMCP_Unlock::leave();
 						}
 						self::log_activity( $slug, $def, $input, $result, $snap ? WPMCP_Undo::finish( $snap, $result ) : null );
 						return $result;
 					},
 					'permission_callback' => static function ( $input = null ) use ( $capability ) {
 						$input = is_array( $input ) ? $input : array();
-						// A capability STRING is never a callback, even when a global function has the same name
-						// (e.g. "activate_plugins" and "delete_plugins" are also WordPress functions).
-						if ( ! is_string( $capability ) && is_callable( $capability ) ) {
-							return call_user_func( $capability, $input );
+						// While this runs, a temporary file-editing unlock (class-unlock.php) may apply.
+						$unlock = class_exists( 'WPMCP_Unlock' );
+						$unlock && WPMCP_Unlock::enter();
+						try {
+							// A capability STRING is never a callback, even when a global function has the same name
+							// (e.g. "activate_plugins" and "delete_plugins" are also WordPress functions).
+							if ( ! is_string( $capability ) && is_callable( $capability ) ) {
+								return call_user_func( $capability, $input );
+							}
+							return current_user_can( $capability );
+						} finally {
+							$unlock && WPMCP_Unlock::leave();
 						}
-						return current_user_can( $capability );
 					},
 					'meta'                => array(
 						'annotations'  => array(

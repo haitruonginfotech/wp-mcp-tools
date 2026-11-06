@@ -376,6 +376,8 @@ class WPMCP_Admin {
 		$list = array(
 			'signedout' => array( 'success', 'The app was signed out. It can connect again after approval.' ),
 			'removed'   => array( 'success', 'The app registration and its tokens were removed.' ),
+			'unlocked'  => array( 'warning', 'File editing is unlocked for MCP tools. Lock it again when you are done.' ),
+			'locked'    => array( 'success', 'File editing is locked again. The site is back as it was.' ),
 			'access'    => array( 'success', 'The access level was saved. It applies to the next request the app makes.' ),
 			'undone'    => array( 'success', 'The change was undone.' ),
 			'undo_failed' => array( 'error', 'Could not undo: ' . (string) get_transient( 'wpmcp_undo_err_' . get_current_user_id() ) ),
@@ -642,6 +644,7 @@ class WPMCP_Admin {
 		</section>
 
 		<?php /* Optional add-on (v0.12.0): remove this line, class-activity.php and its register call. */ ?>
+		<?php WPMCP_Unlock::render(); ?>
 		<?php WPMCP_Activity::render(); ?>
 
 		<?php /* Optional add-on (v0.10.0): remove this line, class-connection-check.php and its require to drop it. */ ?>

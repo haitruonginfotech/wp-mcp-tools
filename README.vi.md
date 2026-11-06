@@ -186,6 +186,10 @@ Mức truy cập chỉ có thể bớt quyền, các kiểm tra capability của
 
 **Cảnh báo.** Khi một kết nối bị từ chối (mức truy cập hoặc giới hạn tần suất) từ 5 lần trở lên trong một giờ, quản trị viên thấy cảnh báo trong WordPress admin, kèm liên kết tới bảng Activity.
 
+## Khoá sửa file (`DISALLOW_FILE_EDIT`)
+
+Nếu site đặt `DISALLOW_FILE_EDIT` (trong `wp-config.php` hoặc plugin bảo mật như SiteGround Security), các tool ghi file theme và plugin bị tắt. Mục *MCP Tools → Connection → File editing lock* mở khoá tạm thời 1, 4 hoặc 24 giờ. Chỉ các lệnh gọi tool MCP bị ảnh hưởng; trình sửa file trong dashboard vẫn bị khoá. Không có gì trong wp-config.php hay plugin bảo mật bị thay đổi, nên khi hết giờ, khi bấm *Lock again now*, hoặc khi plugin này bị tắt/xoá, site trở lại đúng như ban đầu. Trong lúc mở khoá có thông báo đỏ trên mọi màn hình admin, và việc mở/khoá được ghi vào danh sách Activity. Nhóm `theme-write` / `plugin-write` vẫn phải được bật. `DISALLOW_FILE_MODS` (cài, cập nhật, xoá plugin) không bị ảnh hưởng.
+
 ## Bảo mật
 
 - Mọi tool đều kiểm tra một quyền (capability) của WordPress; bản thân endpoint cần người dùng đã đăng nhập có ít nhất quyền đặt ở *Settings → Minimum capability*.
@@ -208,6 +212,7 @@ Mức truy cập chỉ có thể bớt quyền, các kiểm tra capability của
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.14.0 | 2026-11-06 | Mở khoá tạm thời `DISALLOW_FILE_EDIT` cho tool ghi file MCP (1/4/24 giờ), có thông báo đỏ trong admin, ghi vào Activity và tự khoá lại; không thay đổi gì trong plugin bảo mật hay wp-config.php. Tắt plugin sẽ xoá mở khoá; `uninstall.php` xoá option của các add-on. |
 | 0.13.0 | 2026-11-06 | Nút Undo trong bảng Activity (bài viết, option, bài do AI tạo, bài bị đưa vào thùng rác; bị từ chối nếu đã đổi lại sau đó). Cảnh báo trong admin khi một kết nối bị từ chối từ 5 lần trong một giờ; lần chạm giới hạn tần suất được ghi mỗi phút một lần. |
 | 0.12.0 | 2026-11-06 | Nhật ký hoạt động: mọi thay đổi do kết nối AI thực hiện (và mọi lệnh bị mức truy cập chặn) được liệt kê trong admin và qua tool mới `list-activity`. Không lưu nội dung, dữ liệu gửi vào hay IP. |
 | 0.11.1 | 2026-11-06 | Giới hạn tần suất theo kết nối (mặc định 120 lần gọi tool mỗi phút, chỉnh được, `0` = tắt). `update-options` có thêm `dry_run` và không còn trả giá trị cũ/mới của option có tên giống bí mật. |

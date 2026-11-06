@@ -120,4 +120,5 @@ python3 "$PLUGIN_DIR/tests/themefiles.py" "http://localhost:$PORT" admin "$PW" |
 . "$PLUGIN_DIR/tests/ratelimit.sh"
 . "$PLUGIN_DIR/tests/activity.sh"
 . "$PLUGIN_DIR/tests/undo.sh"
+. "$PLUGIN_DIR/tests/unlock.sh"
 exit $STATUS

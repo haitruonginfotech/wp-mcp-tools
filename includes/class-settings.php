@@ -93,7 +93,7 @@ class WPMCP_Settings {
 	 * Theme writes are allowed only when the group is on and core file editing is not disabled.
 	 */
 	public static function theme_write_allowed(): bool {
-		if ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT ) {
+		if ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT && ! ( class_exists( 'WPMCP_Unlock' ) && WPMCP_Unlock::active() ) ) {
 			return false;
 		}
 		return self::group_enabled( 'theme-write' );
@@ -103,7 +103,7 @@ class WPMCP_Settings {
 	 * Plugin file writes: group on, core file editing not disabled.
 	 */
 	public static function plugin_write_allowed(): bool {
-		if ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT ) {
+		if ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT && ! ( class_exists( 'WPMCP_Unlock' ) && WPMCP_Unlock::active() ) ) {
 			return false;
 		}
 		return self::group_enabled( 'plugin-write' );
