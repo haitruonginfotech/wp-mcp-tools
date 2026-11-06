@@ -61,7 +61,7 @@ class WPMCP_Diagnose {
 	 * @param string $method GET|POST.
 	 * @return array{code:int, headers:array, body:string, json:mixed, error:string}
 	 */
-	private static function probe( string $url, string $method = 'GET', ?string $body = null ): array {
+	public static function probe( string $url, string $method = 'GET', ?string $body = null ): array {
 		$args = array(
 			'method'      => $method,
 			'timeout'     => 15,
@@ -138,6 +138,11 @@ class WPMCP_Diagnose {
 		// Which plugin rejects REST requests before ours can answer (optional add-on, class-blockers.php).
 		if ( class_exists( 'WPMCP_Blockers' ) ) {
 			$checks = array_merge( $checks, WPMCP_Blockers::checks() );
+		}
+
+		// Another plugin answering the sign-in discovery documents (optional add-on, class-oauth-conflicts.php).
+		if ( class_exists( 'WPMCP_Oauth_Conflicts' ) ) {
+			$checks = array_merge( $checks, WPMCP_Oauth_Conflicts::checks( ! $skip ) );
 		}
 
 		$active   = (array) get_option( 'active_plugins', array() );
