@@ -377,6 +377,8 @@ class WPMCP_Admin {
 			'signedout' => array( 'success', 'The app was signed out. It can connect again after approval.' ),
 			'removed'   => array( 'success', 'The app registration and its tokens were removed.' ),
 			'access'    => array( 'success', 'The access level was saved. It applies to the next request the app makes.' ),
+			'undone'    => array( 'success', 'The change was undone.' ),
+			'undo_failed' => array( 'error', 'Could not undo: ' . (string) get_transient( 'wpmcp_undo_err_' . get_current_user_id() ) ),
 			'apppw'     => array( 'success', 'Application password created. It is filled into the configs below and will not be shown again.' ),
 			'noapppw'   => array( 'error', 'Application Passwords are not available for your account (they need HTTPS or WP_ENVIRONMENT_TYPE=local).' ),
 		);

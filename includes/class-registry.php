@@ -130,9 +130,9 @@ class WPMCP_Registry {
 	 * Hook: wp_abilities_api_init.
 	 */
 	/** Optional add-on (class-activity.php): note a write in the activity log. */
-	private static function log_activity( string $slug, array $def, array $input, $result ): void {
+	private static function log_activity( string $slug, array $def, array $input, $result, ?array $snapshot = null ): void {
 		if ( class_exists( 'WPMCP_Activity' ) ) {
-			WPMCP_Activity::record( $slug, $def, $input, $result );
+			WPMCP_Activity::record( $slug, $def, $input, $result, $snapshot );
 		}
 	}
 
@@ -169,6 +169,9 @@ class WPMCP_Registry {
 						if ( class_exists( 'WPMCP_Access' ) ) {
 							$limited = WPMCP_Access::rate_check();
 							if ( $limited ) {
+								if ( ! empty( $limited->get_error_data()['first'] ) ) {
+									self::log_activity( $slug, $def, $input, $limited ); // Once per minute, not per call.
+								}
 								return $limited;
 							}
 							$refused = WPMCP_Access::check( $slug, $def, $input );
@@ -177,12 +180,13 @@ class WPMCP_Registry {
 								return $refused;
 							}
 						}
+						$snap = empty( $def['readonly'] ) && class_exists( 'WPMCP_Undo' ) ? WPMCP_Undo::capture( $slug, $input ) : null;
 						try {
 							$result = call_user_func( $callback, $input );
 						} catch ( \Throwable $e ) {
 							$result = new WP_Error( 'wpmcp_exception', $e->getMessage() );
 						}
-						self::log_activity( $slug, $def, $input, $result );
+						self::log_activity( $slug, $def, $input, $result, $snap ? WPMCP_Undo::finish( $snap, $result ) : null );
 						return $result;
 					},
 					'permission_callback' => static function ( $input = null ) use ( $capability ) {

@@ -212,7 +212,7 @@ class WPMCP_Access {
 			return new WP_Error(
 				'wpmcp_rate_limited',
 				sprintf( 'Too many requests: this connection may make %d tool calls per minute. Wait a minute and try again. An administrator can change the limit in MCP Tools → Settings → Rate limit.', $limit ),
-				array( 'status' => 429 )
+				array( 'status' => 429, 'first' => ( $limit + 1 ) === $state['n'] )
 			);
 		}
 		return null;

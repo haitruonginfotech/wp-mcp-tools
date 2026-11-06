@@ -182,6 +182,10 @@ A level can only take rights away; WordPress capability checks still apply. Elem
 
 *MCP Tools → Connection → Activity* lists the last 30 changes AI connections made: when, which app or Application Password, which tool, the target (an ID or name) and the result (`ok`, `error`, `refused`). Calls an access level stopped are listed as `refused`. Reading is not logged, and neither tool input, content, IP addresses nor credentials are stored (200 rows kept). The same list is available to an administrator's AI through the `list-activity` tool.
 
+**Undo.** Rows for `update-post`, `replace-in-post`, `update-options`, `create-post` and `delete-post` (to the trash) have an *Undo* button that puts things back (an AI-created post goes to the trash, a trashed post returns with its old status). It is refused when the post or option was changed again afterwards, so a later human edit is never overwritten. The previous values of the last 20 changes are kept for 7 days. Other changes are logged but cannot be undone here.
+
+**Alert.** When one connection is refused (access level or rate limit) 5 or more times within an hour, a warning appears in the WordPress admin for administrators, with a link to the Activity panel.
+
 ## Security
 
 - Every tool checks a WordPress capability; the endpoint itself needs a signed-in user with at least the capability set in *Settings → Minimum capability*.
@@ -204,6 +208,7 @@ A level can only take rights away; WordPress capability checks still apply. Elem
 
 | Version | Date | Changes |
 |---|---|---|
+| 0.13.0 | 2026-11-06 | Undo button in the Activity panel (posts, options, AI-created posts, trashed posts; refused if changed again since). Admin warning when one connection is refused 5+ times in an hour; rate-limit hits are logged once a minute. |
 | 0.12.0 | 2026-11-06 | Activity log: every change an AI connection makes (and every call an access level refused) is listed in the admin and through the new `list-activity` tool. No content, input or IP is stored. |
 | 0.11.1 | 2026-11-06 | Rate limit per connection (default 120 tool calls a minute, adjustable, `0` = off). `update-options` gets `dry_run` and no longer returns old or new values of secret-looking options. |
 | 0.11.0 | 2026-11-06 | Access levels per connection: Full, Read-only or Drafts only, set per OAuth app and as a default for Application Passwords. Drafts only lets an AI write drafts, uploads and terms but not publish, delete or touch live content, menus, options, themes or plugins. `get-site-info` reports the level. |

@@ -182,6 +182,10 @@ Mức truy cập chỉ có thể bớt quyền, các kiểm tra capability của
 
 *MCP Tools → Connection → Activity* liệt kê 30 thay đổi gần nhất mà kết nối AI đã làm: lúc nào, app hoặc Application Password nào, tool nào, đối tượng (ID hoặc tên) và kết quả (`ok`, `error`, `refused`). Lệnh bị mức truy cập chặn hiện là `refused`. Việc đọc không được ghi, và không lưu nội dung, dữ liệu gửi vào tool, địa chỉ IP hay thông tin đăng nhập (giữ tối đa 200 dòng). Quản trị viên cũng xem được danh sách này qua tool `list-activity`.
 
+**Hoàn tác (Undo).** Các dòng `update-post`, `replace-in-post`, `update-options`, `create-post` và `delete-post` (vào thùng rác) có nút *Undo* để trả lại như cũ (bài do AI tạo được chuyển vào thùng rác, bài bị xoá được khôi phục với trạng thái cũ). Nút bị từ chối nếu bài hoặc option đã bị đổi lần nữa sau đó, nên không bao giờ ghi đè thay đổi mới của người. Giá trị cũ của 20 thay đổi gần nhất được giữ 7 ngày. Các thay đổi khác chỉ được ghi lại, không hoàn tác tại đây.
+
+**Cảnh báo.** Khi một kết nối bị từ chối (mức truy cập hoặc giới hạn tần suất) từ 5 lần trở lên trong một giờ, quản trị viên thấy cảnh báo trong WordPress admin, kèm liên kết tới bảng Activity.
+
 ## Bảo mật
 
 - Mọi tool đều kiểm tra một quyền (capability) của WordPress; bản thân endpoint cần người dùng đã đăng nhập có ít nhất quyền đặt ở *Settings → Minimum capability*.
@@ -204,6 +208,7 @@ Mức truy cập chỉ có thể bớt quyền, các kiểm tra capability của
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.13.0 | 2026-11-06 | Nút Undo trong bảng Activity (bài viết, option, bài do AI tạo, bài bị đưa vào thùng rác; bị từ chối nếu đã đổi lại sau đó). Cảnh báo trong admin khi một kết nối bị từ chối từ 5 lần trong một giờ; lần chạm giới hạn tần suất được ghi mỗi phút một lần. |
 | 0.12.0 | 2026-11-06 | Nhật ký hoạt động: mọi thay đổi do kết nối AI thực hiện (và mọi lệnh bị mức truy cập chặn) được liệt kê trong admin và qua tool mới `list-activity`. Không lưu nội dung, dữ liệu gửi vào hay IP. |
 | 0.11.1 | 2026-11-06 | Giới hạn tần suất theo kết nối (mặc định 120 lần gọi tool mỗi phút, chỉnh được, `0` = tắt). `update-options` có thêm `dry_run` và không còn trả giá trị cũ/mới của option có tên giống bí mật. |
 | 0.11.0 | 2026-11-06 | Mức truy cập theo từng kết nối: Full, Read-only hoặc Drafts only, đặt cho từng app OAuth và mặc định cho Application Password. Drafts only cho AI ghi bản nháp, tải media, term nhưng không xuất bản, xoá hay động vào nội dung đang public, menu, options, theme, plugin. `get-site-info` báo mức đang áp dụng. |
