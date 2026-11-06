@@ -24,6 +24,9 @@ class WPMCP_OAuth_Server {
 	/** @var int User a Bearer token signed in for this request (0 = none). */
 	private static $bearer_user = 0;
 
+	/** OAuth client of the access token that authenticated this request ('' = none). */
+	private static $bearer_client = '';
+
 	public static function init(): void {
 		add_action( 'init', array( __CLASS__, 'route' ), 1 );
 		add_action( 'wpmcp_oauth_purge', array( 'WPMCP_OAuth_Store', 'purge_expired' ) );
@@ -778,6 +781,11 @@ input[type=file]{width:100%;padding:14px;border:1.5px dashed var(--line);border-
 		return (bool) preg_match( '~/' . preg_quote( rest_get_url_prefix(), '~' ) . preg_quote( $route, '~' ) . '/?$~', $path );
 	}
 
+	/** OAuth client that authenticated this request ('' = none). */
+	public static function bearer_client(): string {
+		return self::$bearer_client;
+	}
+
 	/**
 	 * Filter: determine_current_user.
 	 *
@@ -801,7 +809,8 @@ input[type=file]{width:100%;padding:14px;border:1.5px dashed var(--line);border-
 			self::$bearer_error = 'invalid_token';
 			return $user_id;
 		}
-		self::$bearer_user = (int) $row->user_id;
+		self::$bearer_user   = (int) $row->user_id;
+		self::$bearer_client = (string) $row->client_id;
 		return self::$bearer_user;
 	}
 

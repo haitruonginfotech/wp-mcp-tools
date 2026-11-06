@@ -56,6 +56,12 @@
 		if (a && !window.confirm(a.getAttribute('data-wpmcp-confirm'))) e.preventDefault();
 	});
 
+	/* Per-app access level saves as soon as it changes. */
+	root.addEventListener('change', function (e) {
+		var s = e.target.closest('select[data-wpmcp-autosubmit]');
+		if (s && s.form) s.form.submit();
+	});
+
 	/* Unsaved-changes hint on the settings form. */
 	var form = document.getElementById('wpmcp-settings');
 	if (form) {

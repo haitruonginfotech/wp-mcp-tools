@@ -116,4 +116,5 @@ python3 "$PLUGIN_DIR/tests/themefiles.py" "http://localhost:$PORT" admin "$PW" |
 . "$PLUGIN_DIR/tests/hardening.sh"
 . "$PLUGIN_DIR/tests/css_guard.sh"
 . "$PLUGIN_DIR/tests/oauth_conflicts.sh"
+. "$PLUGIN_DIR/tests/access.sh"
 exit $STATUS

@@ -147,6 +147,7 @@ class WPMCP_Site {
 			'site_url'           => site_url( '/' ),
 			'admin_url'          => admin_url(),
 			'wp_version'         => $wp_version,
+			'access_level'       => class_exists( 'WPMCP_Access' ) ? WPMCP_Access::current_level() : 'full',
 			'php_version'        => PHP_VERSION,
 			'environment'        => wp_get_environment_type(),
 			'locale'             => get_locale(),

@@ -16,6 +16,7 @@ class WPMCP_Admin {
 		add_action( 'admin_init', array( __CLASS__, 'register' ) );
 		add_action( 'admin_post_wpmcp_oauth_signout', array( __CLASS__, 'handle_signout' ) );
 		add_action( 'admin_post_wpmcp_oauth_remove', array( __CLASS__, 'handle_remove' ) );
+		add_action( 'admin_post_wpmcp_client_access', array( __CLASS__, 'handle_access' ) );
 		add_action( 'admin_post_wpmcp_app_password', array( __CLASS__, 'handle_app_password' ) );
 		add_filter( 'plugin_action_links_' . plugin_basename( WPMCP_FILE ), array( __CLASS__, 'action_links' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'assets' ) );
@@ -102,6 +103,16 @@ class WPMCP_Admin {
 		$client = self::guard( 'wpmcp_oauth_remove' );
 		WPMCP_OAuth_Store::delete_client( $client );
 		wp_safe_redirect( self::url( 'connection', array( 'wpmcp_msg' => 'removed' ) ) . '#connected-apps' );
+		exit;
+	}
+
+	public static function handle_access(): void {
+		$client = self::guard( 'wpmcp_client_access' );
+		$level  = WPMCP_Access::normalize( isset( $_POST['access'] ) ? sanitize_text_field( wp_unslash( $_POST['access'] ) ) : '' );
+		if ( '' !== $client && '' !== $level && WPMCP_OAuth_Store::client( $client ) ) {
+			WPMCP_Access::set_level( 'oauth:' . $client, $level );
+		}
+		wp_safe_redirect( self::url( 'connection', array( 'wpmcp_msg' => 'access' ) ) . '#connected-apps' );
 		exit;
 	}
 
@@ -365,6 +376,7 @@ class WPMCP_Admin {
 		$list = array(
 			'signedout' => array( 'success', 'The app was signed out. It can connect again after approval.' ),
 			'removed'   => array( 'success', 'The app registration and its tokens were removed.' ),
+			'access'    => array( 'success', 'The access level was saved. It applies to the next request the app makes.' ),
 			'apppw'     => array( 'success', 'Application password created. It is filled into the configs below and will not be shown again.' ),
 			'noapppw'   => array( 'error', 'Application Passwords are not available for your account (they need HTTPS or WP_ENVIRONMENT_TYPE=local).' ),
 		);
@@ -487,6 +499,20 @@ class WPMCP_Admin {
 						<p>Let WordPress install new WP MCP Tools releases by itself (this plugin only). It runs with WordPress' twice-daily check, so it needs WP-Cron or a real cron. Turn off to update by clicking <em>Update now</em> on the Plugins screen.</p>
 					</div>
 					<div class="wpmcp-row__ctl"><?php self::switch_input( $opt . '[auto_update]', ! empty( $s['auto_update'] ), 'Update WP MCP Tools automatically' ); ?></div>
+				</div>
+
+				<div class="wpmcp-row">
+					<div class="wpmcp-row__text">
+						<h3><label for="wpmcp-access-default">Default access level</label></h3>
+						<p>What a connection may do unless you set it per app below. <strong>Full</strong>: everything the user's role allows. <strong>Read-only</strong>: reading only. <strong>Drafts only</strong>: reading, plus creating and editing drafts, uploads and terms; no publishing, deleting, live edits, menus, options, themes or plugins. Applies to Application Passwords and to apps without their own level.</p>
+					</div>
+					<div class="wpmcp-row__ctl">
+						<select id="wpmcp-access-default" class="wpmcp-input" name="<?php echo esc_attr( $opt ); ?>[access_default]">
+							<?php foreach ( WPMCP_Access::LEVELS as $lv ) : ?>
+								<option value="<?php echo esc_attr( $lv ); ?>" <?php selected( WPMCP_Access::default_level(), $lv ); ?>><?php echo esc_html( WPMCP_Access::label( $lv ) ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</div>
 				</div>
 
 				<div class="wpmcp-row wpmcp-row--stack">
@@ -659,7 +685,7 @@ class WPMCP_Admin {
 		?>
 		<div class="wpmcp-table-wrap">
 			<table class="wpmcp-table wpmcp-apps">
-				<thead><tr><th>Client</th><th>Status</th><th>Connected as</th><th>Registered</th><th><span class="screen-reader-text">Actions</span></th></tr></thead>
+				<thead><tr><th>Client</th><th>Status</th><th>Connected as</th><th>Access</th><th>Registered</th><th><span class="screen-reader-text">Actions</span></th></tr></thead>
 				<tbody>
 				<?php foreach ( $clients as $id => $c ) : ?>
 					<?php
@@ -670,6 +696,20 @@ class WPMCP_Admin {
 						<td><strong><?php echo esc_html( $c['client_name'] ); ?></strong><code class="wpmcp-small"><?php echo esc_html( implode( ', ', (array) $c['redirect_uris'] ) ); ?></code></td>
 						<td><?php if ( $tokens ) : ?><span class="wpmcp-tag is-ok">Connected</span><small><?php echo (int) $tokens; ?> active token(s)</small><?php else : ?><span class="wpmcp-tag">Not signed in</span><?php endif; ?></td>
 						<td><?php echo esc_html( implode( ', ', wp_list_pluck( $users, 'user_login' ) ) ?: '-' ); ?></td>
+						<td>
+							<form class="wpmcp-access" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+								<?php wp_nonce_field( 'wpmcp_client_access' ); ?>
+								<input type="hidden" name="action" value="wpmcp_client_access">
+								<input type="hidden" name="client_id" value="<?php echo esc_attr( $id ); ?>">
+								<label class="screen-reader-text" for="wpmcp-access-<?php echo esc_attr( $id ); ?>">Access level for <?php echo esc_attr( $c['client_name'] ); ?></label>
+								<select id="wpmcp-access-<?php echo esc_attr( $id ); ?>" class="wpmcp-input" name="access" data-wpmcp-autosubmit>
+									<?php foreach ( WPMCP_Access::LEVELS as $lv ) : ?>
+										<option value="<?php echo esc_attr( $lv ); ?>" <?php selected( WPMCP_Access::level_for( 'oauth:' . $id ), $lv ); ?>><?php echo esc_html( WPMCP_Access::label( $lv ) ); ?></option>
+									<?php endforeach; ?>
+								</select>
+								<noscript><button class="wpmcp-btn wpmcp-btn--sm" type="submit">Save</button></noscript>
+							</form>
+						</td>
 						<td><?php echo esc_html( wp_date( get_option( 'date_format' ), (int) $c['created_at'] ) ); ?></td>
 						<td class="wpmcp-actions">
 							<?php if ( $tokens ) : ?>

@@ -157,8 +157,14 @@ class WPMCP_Registry {
 					'description'         => $def['description'],
 					'category'            => WPMCP_NS . '-' . $def['group'],
 					'input_schema'        => $schema,
-					'execute_callback'    => static function ( $input = null ) use ( $callback ) {
+					'execute_callback'    => static function ( $input = null ) use ( $callback, $slug, $def ) {
 						$input = is_array( $input ) ? $input : array();
+						if ( class_exists( 'WPMCP_Access' ) ) {
+							$refused = WPMCP_Access::check( $slug, $def, $input );
+							if ( $refused ) {
+								return $refused;
+							}
+						}
 						try {
 							return call_user_func( $callback, $input );
 						} catch ( \Throwable $e ) {

@@ -166,6 +166,18 @@ Repeater and flexible values **replace** all rows (a sub field missing from a ro
 
 `vendor/` is committed and shipped (`wordpress/mcp-adapter`, `wordpress/php-mcp-schema`, `automattic/jetpack-autoloader`). Upstream marks bundling the adapter as deprecated since 0.7.0; if a future version breaks it, install the standalone MCP Adapter plugin, which wins when it is newer. A GitHub workflow checks for new adapter releases every Monday, runs `tests/e2e.sh` and, if it passes, publishes a patch release automatically; otherwise it opens a pull request.
 
+## Access levels
+
+Each connection has an access level, set in *MCP Tools → Connection → Connected apps* (per OAuth app) and *Settings → Default access level* (Application Passwords and apps without their own level):
+
+| Level | What the connection may do |
+|---|---|
+| Full | Everything the signed-in user's role allows (default). |
+| Read-only | Only tools that read. Nothing on the site changes. |
+| Drafts only | Reading, plus creating and editing drafts, uploads and terms. Publishing, scheduling, deleting, changing live posts, menus, options, themes and plugins are refused. |
+
+A level can only take rights away; WordPress capability checks still apply. Elementor tools count as writes below Full, except those Elementor marks read-only. `get-site-info` reports the level in force.
+
 ## Security
 
 - Every tool checks a WordPress capability; the endpoint itself needs a signed-in user with at least the capability set in *Settings → Minimum capability*.
@@ -186,6 +198,7 @@ Repeater and flexible values **replace** all rows (a sub field missing from a ro
 
 | Version | Date | Changes |
 |---|---|---|
+| 0.11.0 | 2026-11-06 | Access levels per connection: Full, Read-only or Drafts only, set per OAuth app and as a default for Application Passwords. Drafts only lets an AI write drafts, uploads and terms but not publish, delete or touch live content, menus, options, themes or plugins. `get-site-info` reports the level. |
 | 0.10.6 | 2026-11-06 | Connection check names plugins that answer the sign-in discovery document (`/.well-known/oauth-authorization-server`) instead of WP MCP Tools, and lists other active MCP-related plugins. Such a conflict makes a client sign in somewhere else and then fail with "Authorization failed". |
 | 0.10.5 | 2026-10-30 | Fix: the copy boxes in *Connect your AI client* showed light text on a light background (since 0.10.0). The Connection check commands use their own style now. |
 | 0.10.4 | 2026-10-30 | OAuth: registration accepts at most 5 redirect URIs of 512 characters; the consent page shows the full redirect URI and says the app name is unverified. Claude Desktop proxy refuses plain `http://` to a remote site (would send the Application Password unencrypted). |

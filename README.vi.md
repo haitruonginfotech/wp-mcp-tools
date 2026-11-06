@@ -166,6 +166,18 @@ Giá trị repeater và flexible **thay thế** toàn bộ các dòng (sub field
 
 `vendor/` được commit và đóng gói (`wordpress/mcp-adapter`, `wordpress/php-mcp-schema`, `automattic/jetpack-autoloader`). Upstream đã đánh dấu việc nhúng adapter là không khuyến khích từ 0.7.0; nếu phiên bản sau làm hỏng, hãy cài plugin MCP Adapter riêng, bản nào mới hơn sẽ được dùng. Một workflow GitHub kiểm tra bản adapter mới mỗi thứ Hai, chạy `tests/e2e.sh` và nếu qua sẽ tự phát hành bản vá; nếu không sẽ mở pull request.
 
+## Mức truy cập
+
+Mỗi kết nối có một mức truy cập, đặt ở *MCP Tools → Connection → Connected apps* (theo từng app OAuth) và *Settings → Default access level* (Application Password và app chưa có mức riêng):
+
+| Mức | Kết nối được làm gì |
+|---|---|
+| Full | Mọi thứ mà vai trò của người dùng cho phép (mặc định). |
+| Read-only | Chỉ các tool đọc. Không có gì trên site bị thay đổi. |
+| Drafts only | Đọc, cộng với tạo và sửa bản nháp, tải media, term. Từ chối xuất bản, hẹn giờ, xoá, sửa bài đang public, menu, options, theme, plugin. |
+
+Mức truy cập chỉ có thể bớt quyền, các kiểm tra capability của WordPress vẫn áp dụng. Tool Elementor bị coi là ghi khi mức thấp hơn Full, trừ tool Elementor đánh dấu chỉ đọc. `get-site-info` cho biết mức đang áp dụng.
+
 ## Bảo mật
 
 - Mọi tool đều kiểm tra một quyền (capability) của WordPress; bản thân endpoint cần người dùng đã đăng nhập có ít nhất quyền đặt ở *Settings → Minimum capability*.
@@ -186,6 +198,7 @@ Giá trị repeater và flexible **thay thế** toàn bộ các dòng (sub field
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.11.0 | 2026-11-06 | Mức truy cập theo từng kết nối: Full, Read-only hoặc Drafts only, đặt cho từng app OAuth và mặc định cho Application Password. Drafts only cho AI ghi bản nháp, tải media, term nhưng không xuất bản, xoá hay động vào nội dung đang public, menu, options, theme, plugin. `get-site-info` báo mức đang áp dụng. |
 | 0.10.6 | 2026-11-06 | Connection check nêu tên plugin đang trả lời tài liệu đăng nhập (`/.well-known/oauth-authorization-server`) thay cho WP MCP Tools, và liệt kê các plugin MCP khác đang bật. Xung đột này khiến client đăng nhập ở chỗ khác rồi báo "Authorization failed". |
 | 0.10.5 | 2026-10-30 | Sửa lỗi: các ô copy trong *Connect your AI client* hiện chữ sáng trên nền sáng nên không đọc được (từ 0.10.0). Các lệnh trong Connection check nay dùng kiểu riêng. |
 | 0.10.4 | 2026-10-30 | OAuth: đăng ký client nhận tối đa 5 redirect URI, mỗi cái ≤ 512 ký tự; trang đồng ý hiện đầy đủ redirect URI và nói rõ tên app chưa được xác minh. Proxy Claude Desktop từ chối `http://` thường tới site từ xa (sẽ gửi Application Password không mã hóa). |

@@ -125,6 +125,9 @@ class WPMCP_OAuth_Store {
 	public static function delete_client( string $client_id ): void {
 		$clients = self::clients();
 		unset( $clients[ $client_id ] );
+		if ( class_exists( 'WPMCP_Access' ) ) {
+			WPMCP_Access::forget( 'oauth:' . $client_id );
+		}
 		update_option( self::CLIENTS_OPTION, $clients, false );
 		self::revoke_client_tokens( $client_id );
 	}
