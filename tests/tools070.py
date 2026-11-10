@@ -4,7 +4,7 @@
 Usage: python3 tests/tools070.py BASE_URL USER APP_PASSWORD [--manage]
 Default mode: the manage group is OFF, so its tools must not be listed.
 --manage: the group was switched on (tests/e2e.sh does that); exercises activate / deactivate / delete / rollback on a
-dummy plugin and checks that WP MCP Tools protects itself. No internet is needed.
+dummy plugin and checks that WP MCP Tools protects itself. Works with or without internet.
 """
 import base64, json, sys, urllib.request, urllib.error
 
@@ -101,8 +101,10 @@ if manage:
     check('cannot update itself through MCP', err and 'Dashboard' in str(r), str(r)[:120])
     err, r = tool('wpmcp-deactivate-plugin', {'plugin': 'no-such-plugin'})
     check('unknown plugin -> error', err)
-    err, r = tool('wpmcp-install-plugin', {'slug': 'classic-editor'})
-    check('install without internet fails cleanly', err, str(r)[:120])
+    # A slug that does not exist: fails the same way with or without internet (CI runners have internet, and a real
+    # plugin such as classic-editor would then be installed).
+    err, r = tool('wpmcp-install-plugin', {'slug': 'wpmcp-no-such-plugin-zz9'})
+    check('install of an unknown slug fails cleanly', err, str(r)[:120])
     err, r = tool('wpmcp-switch-theme', {'theme': 'no-such-theme'})
     check('switch to unknown theme -> error', err)
 
