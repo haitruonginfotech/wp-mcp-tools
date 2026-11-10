@@ -124,4 +124,5 @@ python3 "$PLUGIN_DIR/tests/themefiles.py" "http://localhost:$PORT" admin "$PW" |
 . "$PLUGIN_DIR/tests/audit.sh"
 . "$PLUGIN_DIR/tests/wellknown.sh"
 . "$PLUGIN_DIR/tests/meta.sh"
+. "$PLUGIN_DIR/tests/unlock_sg.sh"
 exit $STATUS

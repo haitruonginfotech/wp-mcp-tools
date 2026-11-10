@@ -164,7 +164,7 @@ class WPMCP_Registry {
 					'description'         => $def['description'],
 					'category'            => WPMCP_NS . '-' . $def['group'],
 					'input_schema'        => $schema,
-					'execute_callback'    => static function ( $input = null ) use ( $callback, $slug, $def ) {
+					'execute_callback'    => static function ( $input = null ) use ( $callback, $slug, $def, $capability ) {
 						$input = is_array( $input ) ? $input : array();
 						if ( class_exists( 'WPMCP_Access' ) ) {
 							$limited = WPMCP_Access::rate_check();
@@ -178,6 +178,18 @@ class WPMCP_Registry {
 							if ( $refused ) {
 								self::log_activity( $slug, $def, $input, $refused );
 								return $refused;
+							}
+						}
+						// File-editing tools: the permission check lets an administrator through so that the refusal can carry its real
+						// reason (the Abilities API would otherwise answer with a bare "Permission denied"). Check it here for real.
+						if ( class_exists( 'WPMCP_Unlock' ) && is_string( $capability ) && WPMCP_Unlock::denied_error( $capability ) ) {
+							WPMCP_Unlock::enter();
+							$allowed = current_user_can( $capability );
+							WPMCP_Unlock::leave();
+							if ( ! $allowed ) {
+								$why = WPMCP_Unlock::denied_error( $capability );
+								self::log_activity( $slug, $def, $input, $why );
+								return $why;
 							}
 						}
 						$snap   = empty( $def['readonly'] ) && class_exists( 'WPMCP_Undo' ) ? WPMCP_Undo::capture( $slug, $input ) : null;
@@ -204,7 +216,12 @@ class WPMCP_Registry {
 							if ( ! is_string( $capability ) && is_callable( $capability ) ) {
 								return call_user_func( $capability, $input );
 							}
-							return current_user_can( $capability );
+							$ok = current_user_can( $capability );
+							if ( ! $ok && class_exists( 'WPMCP_Unlock' ) ) {
+								// Let an administrator through to the tool itself, which refuses with the real reason.
+								return null !== WPMCP_Unlock::denied_error( $capability );
+							}
+							return $ok;
 						} finally {
 							$unlock && WPMCP_Unlock::leave();
 						}

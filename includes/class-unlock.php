@@ -33,7 +33,8 @@ final class WPMCP_Unlock {
 	private static $depth = 0;
 
 	public static function init(): void {
-		add_filter( 'map_meta_cap', array( __CLASS__, 'map_caps' ), 20, 2 );
+		add_filter( 'map_meta_cap', array( __CLASS__, 'map_caps' ), 9999, 2 );
+		add_action( 'admin_bar_menu', array( __CLASS__, 'admin_bar' ), 999 );
 		if ( is_admin() ) {
 			add_action( 'admin_notices', array( __CLASS__, 'notice' ) );
 			add_action( 'admin_post_wpmcp_unlock', array( __CLASS__, 'handle_unlock' ) );
@@ -41,9 +42,19 @@ final class WPMCP_Unlock {
 		}
 	}
 
-	/** Is the site locked by DISALLOW_FILE_EDIT at all? */
+	/**
+	 * Does this site block file editing? By the DISALLOW_FILE_EDIT constant, by SiteGround Security
+	 * (option sg_security_disable_file_edit, which does not define the constant), or by any other plugin: an
+	 * administrator who is refused edit_themes on a single site.
+	 */
 	public static function locked_by_site(): bool {
-		return defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT;
+		if ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT ) {
+			return true;
+		}
+		if ( get_option( 'sg_security_disable_file_edit' ) || apply_filters( 'wpmcp_file_edit_locked', false ) ) {
+			return true;
+		}
+		return 0 === self::$depth && ! is_multisite() && current_user_can( 'manage_options' ) && ! current_user_can( 'edit_themes' );
 	}
 
 	/** Unix time the unlock ends (0 = not unlocked). */
@@ -52,8 +63,42 @@ final class WPMCP_Unlock {
 		return $until > time() ? $until : 0;
 	}
 
+	/** Is the temporary unlock open? (It only has an effect while one of our tools runs.) */
 	public static function active(): bool {
-		return self::locked_by_site() && self::until() > 0;
+		return self::until() > 0;
+	}
+
+	/**
+	 * Why was a file tool refused? A WP_Error with the real reason, instead of the bare "Permission denied".
+	 *
+	 * @param mixed $capability The capability the tool needs.
+	 * @return WP_Error|null Null when this is not a file-editing refusal.
+	 */
+	public static function denied_error( $capability ) {
+		if ( ! is_string( $capability ) || ! in_array( $capability, array( 'edit_themes', 'edit_plugins', 'edit_files' ), true ) || ! current_user_can( 'manage_options' ) ) {
+			return null;
+		}
+		if ( self::until() > 0 ) {
+			$msg = 'The temporary file-editing unlock is open, but something else still blocks ' . $capability . ' (a security plugin or the host). Run the wpmcp-diagnose tool and look at file_edit.';
+		} else {
+			$msg = 'File editing is locked on this site (DISALLOW_FILE_EDIT or a security plugin such as SiteGround Security). In WordPress open WP MCP Tools, Connection tab, File editing lock, and unlock it for 1 to 24 hours. It locks itself again afterwards.';
+		}
+		return new WP_Error( 'wpmcp_file_edit_locked', $msg, array( 'status' => 403 ) );
+	}
+
+	/** Red button in the admin bar (dashboard and website) while the lock is open. */
+	public static function admin_bar( $bar ): void {
+		if ( ! current_user_can( 'manage_options' ) || ! self::active() ) {
+			return;
+		}
+		$bar->add_node(
+			array(
+				'id'    => 'wpmcp-unlocked',
+				'title' => '<span style="background:#b32d2e;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600">' . esc_html( sprintf( 'MCP file editing UNLOCKED until %s', wp_date( get_option( 'time_format' ), self::until() ) ) ) . '</span>',
+				'href'  => WPMCP_Admin::url( 'connection' ) . '#file-lock',
+				'meta'  => array( 'title' => 'AI connections can edit theme and plugin files. Click to lock it again.' ),
+			)
+		);
 	}
 
 	public static function enter(): void {
@@ -73,7 +118,7 @@ final class WPMCP_Unlock {
 	 * @return string[]
 	 */
 	public static function map_caps( $caps, $cap ) {
-		if ( self::$depth > 0 && in_array( $cap, array( 'edit_themes', 'edit_plugins', 'edit_files' ), true ) && in_array( 'do_not_allow', (array) $caps, true ) && self::active() ) {
+		if ( self::$depth > 0 && in_array( $cap, array( 'edit_themes', 'edit_plugins', 'edit_files' ), true ) && self::active() ) {
 			return array( 'manage_options' );
 		}
 		return $caps;
@@ -123,7 +168,7 @@ final class WPMCP_Unlock {
 			return;
 		}
 		printf(
-			'<div class="notice notice-error"><p><strong>WP MCP Tools: file editing is UNLOCKED</strong> for AI connections until %s. The site\'s DISALLOW_FILE_EDIT lock is bypassed for theme and plugin file tools. <a href="%s">Lock it again now</a> when you are done.</p></div>',
+			'<div class="notice notice-error"><p><strong>WP MCP Tools: file editing is UNLOCKED</strong> for AI connections until %s. The site\'s file-editing lock is lifted for the theme and plugin file tools. <a href="%s">Lock it again now</a> when you are done.</p></div>',
 			esc_html( wp_date( get_option( 'time_format' ), self::until() ) ),
 			esc_url( WPMCP_Admin::url( 'connection' ) . '#file-lock' )
 		);
@@ -139,7 +184,7 @@ final class WPMCP_Unlock {
 		<section class="wpmcp-panel" id="file-lock">
 			<div class="wpmcp-panel__head">
 				<h2>File editing lock</h2>
-				<p>This site sets <code>DISALLOW_FILE_EDIT</code> (in <code>wp-config.php</code> or a security plugin), so the theme and plugin file tools are off. You can lift the lock for a limited time. Only MCP tools are affected, the dashboard editors stay locked, and nothing in your security plugin or <code>wp-config.php</code> is changed: when the time ends the site is exactly as before.</p>
+				<p>This site blocks file editing (<code>DISALLOW_FILE_EDIT</code> in <code>wp-config.php</code>, or a security plugin such as SiteGround Security), so the theme and plugin file tools are refused. You can lift the lock for a limited time. Only MCP tools are affected, the dashboard editors stay locked, and nothing in your security plugin or <code>wp-config.php</code> is changed: when the time ends the site is exactly as before.</p>
 			</div>
 			<div class="wpmcp-panel__body">
 				<?php if ( $until ) : ?>
