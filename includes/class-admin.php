@@ -546,6 +546,20 @@ class WPMCP_Admin {
 
 				<div class="wpmcp-row wpmcp-row--select">
 					<div class="wpmcp-row__text">
+						<h3><label for="wpmcp-discovery">Sign-in discovery</label></h3>
+						<p>How AI clients find this site's sign-in. <em>Automatic</em> tests whether <code>/.well-known/</code> reaches WordPress. Choose <em>Path-based</em> if your host blocks <code>/.well-known/</code> (404 from the web server) or another MCP plugin answers the sign-in instead of this one.</p>
+					</div>
+					<div class="wpmcp-row__ctl">
+						<select id="wpmcp-discovery" class="wpmcp-input" name="<?php echo esc_attr( $opt ); ?>[discovery]">
+							<?php foreach ( array( 'auto' => 'Automatic', 'path' => 'Path-based (/wpmcp-oauth)', 'wellknown' => 'Standard (/.well-known)' ) as $k => $label ) : ?>
+								<option value="<?php echo esc_attr( $k ); ?>" <?php selected( $s['discovery'], $k ); ?>><?php echo esc_html( $label ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+				</div>
+
+				<div class="wpmcp-row wpmcp-row--select">
+					<div class="wpmcp-row__text">
 						<h3><label for="wpmcp-cap">Minimum capability</label></h3>
 						<p>Needed to use the endpoint and to approve OAuth sign-ins. Each tool still checks its own capability (theme writes need <code>edit_themes</code>).</p>
 						<label class="wpmcp-check"><input type="checkbox" name="<?php echo esc_attr( $opt ); ?>[expose_default_server]" value="1" <?php checked( ! empty( $s['expose_default_server'] ) ); ?>> Also expose the tools on the MCP Adapter default server</label>
@@ -831,7 +845,7 @@ class WPMCP_Admin {
 
 	private static function hidden_connection( array $s ): void {
 		$opt = WPMCP_Settings::OPTION;
-		foreach ( array( 'endpoint_capability', 'public_url', 'auth_method' ) as $k ) {
+		foreach ( array( 'endpoint_capability', 'public_url', 'auth_method', 'discovery' ) as $k ) {
 			printf( '<input type="hidden" name="%s[%s]" value="%s">', esc_attr( $opt ), esc_attr( $k ), esc_attr( (string) $s[ $k ] ) );
 		}
 		foreach ( array( 'enabled', 'oauth_enabled', 'expose_default_server', 'auto_update' ) as $k ) {

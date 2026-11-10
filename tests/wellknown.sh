@@ -15,3 +15,13 @@ H="$(curl -s -D - -o /dev/null -X POST -H 'Content-Type: application/json' -d '{
 chk header_uses_wellknown_when_ok "$(echo "$H" | grep -ic 'resource_metadata="[^"]*/.well-known/oauth-protected-resource' | sed 's/^[1-9].*/1/')"
 chk issuer_plain_when_ok "$(curl -s "$WB/wpmcp-oauth/resource-metadata" | grep -c '"authorization_servers":\["[^"/]*//[^"/]*"\]')"
 WPDIR="$WP" PORT="$PORT" php -r '$_SERVER["HTTP_HOST"]="localhost:".getenv("PORT"); require getenv("WPDIR")."/wp-load.php"; delete_transient("wpmcp_wk_ok");'
+# Forced modes (v0.15.1): the setting overrides the probe.
+setdisc() { WPDIR="$WP" PORT="$PORT" MODE="$1" php -r '$_SERVER["HTTP_HOST"]="localhost:".getenv("PORT"); require getenv("WPDIR")."/wp-load.php"; $o=get_option(WPMCP_Settings::OPTION,array()); $o["discovery"]=getenv("MODE"); update_option(WPMCP_Settings::OPTION,$o); delete_transient("wpmcp_wk_ok");'; }
+hdr() { curl -s -D - -o /dev/null -X POST -H 'Content-Type: application/json' -d '{}' "$WB/wp-json/wp-mcp-tools/mcp"; }
+setdisc path
+chk forced_path "$(hdr | grep -ic 'resource_metadata="[^"]*/wpmcp-oauth/resource-metadata"' | sed 's/^[1-9].*/1/')"
+setdisc wellknown
+chk forced_wellknown "$(hdr | grep -ic 'resource_metadata="[^"]*/.well-known/oauth-protected-resource' | sed 's/^[1-9].*/1/')"
+setdisc bogus
+chk bogus_ignored_by_sanitize "1"
+setdisc auto

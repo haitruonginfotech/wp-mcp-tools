@@ -92,6 +92,13 @@ class WPMCP_OAuth_Server {
 		if ( ! self::pretty() ) {
 			return false;
 		}
+		$mode = (string) WPMCP_Settings::get( 'discovery' );
+		if ( 'path' === $mode ) {
+			return false;
+		}
+		if ( 'wellknown' === $mode ) {
+			return true;
+		}
 		$cached = get_transient( 'wpmcp_wk_ok' );
 		if ( false !== $cached ) {
 			return '1' === $cached;

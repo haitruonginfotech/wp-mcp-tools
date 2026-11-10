@@ -47,6 +47,8 @@ class WPMCP_Settings {
 			'oauth_enabled'         => 1,
 			// Public base URL override (tunnel / proxy). Empty = home_url().
 			'public_url'            => '',
+			// Where clients find the sign-in metadata: auto (probe), path (/wpmcp-oauth/..., for hosts that block /.well-known/), wellknown.
+			'discovery'             => 'auto',
 			// Auth method shown in the "Connect your AI client" instructions.
 			'auth_method'           => 'oauth',
 			// Let WordPress install new WP MCP Tools releases by itself (this plugin only).
@@ -157,6 +159,7 @@ class WPMCP_Settings {
 		$url               = trim( (string) ( $input['public_url'] ?? '' ) );
 		$out['public_url'] = '' === $url ? '' : untrailingslashit( esc_url_raw( $url, array( 'http', 'https' ) ) );
 
+		$out['discovery']   = in_array( $input['discovery'] ?? '', array( 'auto', 'path', 'wellknown' ), true ) ? $input['discovery'] : $def['discovery'];
 		$out['auth_method'] = in_array( $input['auth_method'] ?? '', array( 'oauth', 'app_password' ), true ) ? $input['auth_method'] : $def['auth_method'];
 
 		return $out;
