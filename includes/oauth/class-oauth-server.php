@@ -278,6 +278,7 @@ class WPMCP_OAuth_Server {
 			'revocation_endpoint'                   => self::endpoint( 'revoke' ),
 			'response_types_supported'              => array( 'code' ),
 			'response_modes_supported'              => array( 'query' ),
+			'authorization_response_iss_parameter_supported' => true,
 			'grant_types_supported'                 => array( 'authorization_code', 'refresh_token' ),
 			'code_challenge_methods_supported'      => array( 'S256' ),
 			'token_endpoint_auth_methods_supported' => array( 'none', 'client_secret_post', 'client_secret_basic' ),
@@ -391,8 +392,14 @@ class WPMCP_OAuth_Server {
 		return false;
 	}
 
+	/** Authorization response params with `iss` (RFC 9207). It must equal the issuer in the metadata exactly. */
+	public static function with_iss( array $args ): array {
+		$args['iss'] = self::issuer();
+		return $args;
+	}
+
 	private static function redirect_with( string $uri, array $args ): void {
-		$args['iss'] = self::base();
+		$args = self::with_iss( $args );
 		wp_redirect( add_query_arg( array_map( 'rawurlencode', $args ), $uri ) ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
 		exit;
 	}

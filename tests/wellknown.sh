@@ -25,3 +25,9 @@ chk forced_wellknown "$(hdr | grep -ic 'resource_metadata="[^"]*/.well-known/oau
 setdisc bogus
 chk bogus_ignored_by_sanitize "1"
 setdisc auto
+# v0.15.2: `iss` in the authorization response must equal the metadata issuer in every mode, or Claude refuses the server.
+for m in path wellknown auto; do
+  setdisc "$m"
+  R="$(WPDIR="$WP" PORT="$PORT" php -r '$_SERVER["HTTP_HOST"]="localhost:".getenv("PORT"); require getenv("WPDIR")."/wp-load.php"; $m=WPMCP_OAuth_Server::server_metadata(); $a=WPMCP_OAuth_Server::with_iss(array("code"=>"x")); echo ($a["iss"]===$m["issuer"] && $a["iss"]===WPMCP_OAuth_Server::issuer() && !empty($m["authorization_response_iss_parameter_supported"]))?"1":"0";')"
+  chk "iss_matches_issuer_$m" "$R"
+done
