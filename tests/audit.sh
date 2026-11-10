@@ -154,11 +154,33 @@ $h = $run( 'site-health', array() );
 $out['health_runs'] = isset( $h['status'], $h['updates'], $h['cron'], $h['disk'], $h['uptime'] );
 // Admin tab renders.
 ob_start(); WPMCP_Watch::render_tab(); $tab = ob_get_clean();
+// Email alert settings: off by default, several recipients, admin email as fallback.
+delete_option( WPMCP_Watch::OPT );
+$d = WPMCP_Watch::settings();
+$out['mail_default_off']   = 0 === $d['email'] && '' === $d['emails'];
+$out['mail_parse']         = array( 'a@x.com', 'b@y.org' ) === WPMCP_Watch::parse_emails( "a@x.com, b@y.org;A@X.com\nnot-an-email" );
+$out['mail_fallback_admin'] = array( get_option( 'admin_email' ) ) === WPMCP_Watch::recipients();
+update_option( WPMCP_Watch::OPT, array( 'enabled' => 1, 'email' => 1, 'emails' => 'one@x.com, two@y.org' ) );
+$out['mail_recipients']    = array( 'one@x.com', 'two@y.org' ) === WPMCP_Watch::recipients();
+$sent = array();
+add_filter( 'pre_wp_mail', static function ( $r, $a ) use ( &$sent ) { $sent[] = $a['to']; return true; }, 10, 2 );
+WPMCP_Watch::set_baseline();
+file_put_contents( WP_PLUGIN_DIR . '/wpmcp-mail-probe.php', '<?php // probe' );
+WPMCP_Watch::cron();
+unlink( WP_PLUGIN_DIR . '/wpmcp-mail-probe.php' );
+$out['mail_sent_to_list']  = 1 === count( $sent ) && array( 'one@x.com', 'two@y.org' ) === (array) $sent[0];
+update_option( WPMCP_Watch::OPT, array( 'enabled' => 1, 'email' => 0, 'emails' => 'one@x.com' ) );
+$sent = array();
+file_put_contents( WP_PLUGIN_DIR . '/wpmcp-mail-probe.php', '<?php // probe' );
+WPMCP_Watch::cron();
+unlink( WP_PLUGIN_DIR . '/wpmcp-mail-probe.php' );
+$out['mail_off_sends_nothing'] = array() === $sent;
+WPMCP_Watch::set_baseline();
 $out['tab_renders'] = false !== strpos( $tab, 'File change watch' ) && false !== strpos( $tab, 'check-integrity' );
 echo json_encode( $out );
 PHP
 AUD="$(WPDIR="$WP" PORT="$PORT" php "$WORK/audit.php" 2>&1 | tail -1)"
 echo "INFO audit: core checksums available = $(echo "$AUD" | grep -o '"integrity_core_verified":[a-z]*')"
-for k in ro_audit-seo ro_audit-geo ro_check-integrity ro_scan-suspicious ro_file-watch-check ro_site-health baseline_not_readonly seo_flags_problems seo_good_post_clean seo_site_hidden_flag seo_batch_worst_first seo_reads_yoast seo_noindex_flagged geo_blocked_bots geo_allow_all geo_jsonld geo_runs geo_post integrity_runs integrity_core_note integrity_detects_edit integrity_detects_extra scan_patterns_match scan_clean_code_quiet scan_finds_uploads_php scan_finds_pattern scan_has_disclaimer scan_counts_high watch_needs_baseline watch_baseline watch_clean watch_detects_added watch_stores_last watch_notice watch_detects_added_changed watch_detects_modified_removed watch_update_rebaselines watch_disabled_no_rebaseline watch_cron_follows_setting watch_diff health_runs tab_renders; do
+for k in ro_audit-seo ro_audit-geo ro_check-integrity ro_scan-suspicious ro_file-watch-check ro_site-health baseline_not_readonly seo_flags_problems seo_good_post_clean seo_site_hidden_flag seo_batch_worst_first seo_reads_yoast seo_noindex_flagged geo_blocked_bots geo_allow_all geo_jsonld geo_runs geo_post integrity_runs integrity_core_note integrity_detects_edit integrity_detects_extra scan_patterns_match scan_clean_code_quiet scan_finds_uploads_php scan_finds_pattern scan_has_disclaimer scan_counts_high watch_needs_baseline watch_baseline watch_clean watch_detects_added watch_stores_last watch_notice watch_detects_added_changed watch_detects_modified_removed watch_update_rebaselines watch_disabled_no_rebaseline watch_cron_follows_setting watch_diff health_runs mail_default_off mail_parse mail_fallback_admin mail_recipients mail_sent_to_list mail_off_sends_nothing tab_renders; do
   if echo "$AUD" | grep -q "\"$k\":true"; then echo "PASS audit: $k"; else echo "FAIL audit: $k ($AUD)"; STATUS=1; fi
 done

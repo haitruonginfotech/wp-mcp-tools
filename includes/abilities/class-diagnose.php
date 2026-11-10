@@ -195,10 +195,10 @@ class WPMCP_Diagnose {
 					? self::check( 'oauth_resource_metadata', 'ok', 'Protected-resource metadata (RFC 9728) is served.' )
 					: self::check( 'oauth_resource_metadata', 'fail', 'Protected-resource metadata returned HTTP ' . $prm['code'] . ' ' . ( $prm['error'] ?: '' ), 'Make sure /.well-known/* reaches WordPress (nginx location rules, security plugin, CDN).' );
 
-				$as = self::probe( $base . '/.well-known/oauth-authorization-server' );
+				$as = self::probe( WPMCP_OAuth_Server::server_metadata_url() );
 				$checks[] = ( 200 === $as['code'] && is_array( $as['json'] ) && ! empty( $as['json']['registration_endpoint'] ) )
 					? self::check( 'oauth_server_metadata', 'ok', 'Authorization-server metadata (RFC 8414) is served.' )
-					: self::check( 'oauth_server_metadata', 'fail', 'Authorization-server metadata returned HTTP ' . $as['code'] . ' ' . ( $as['error'] ?: '' ), 'Allow /.well-known/oauth-authorization-server.' );
+					: self::check( 'oauth_server_metadata', 'fail', 'Authorization-server metadata returned HTTP ' . $as['code'] . ' ' . ( $as['error'] ?: '' ), 'Allow ' . wp_parse_url( WPMCP_OAuth_Server::server_metadata_url(), PHP_URL_PATH ) . '.' );
 
 				// An empty registration must be rejected by OUR handler with a JSON 400 (nothing is stored).
 				$reg = self::probe( WPMCP_OAuth_Server::endpoint( 'register' ), 'POST', '{}' );
@@ -210,7 +210,7 @@ class WPMCP_Diagnose {
 			$outside = array(
 				'curl -i ' . $mcp,
 				'curl -i ' . WPMCP_OAuth_Server::resource_metadata_url(),
-				'curl -i ' . $base . '/.well-known/oauth-authorization-server',
+				'curl -i ' . WPMCP_OAuth_Server::server_metadata_url(),
 				'curl -i -X POST ' . WPMCP_OAuth_Server::endpoint( 'register' ) . ' -H "Content-Type: application/json" -d "{}"',
 			);
 		}

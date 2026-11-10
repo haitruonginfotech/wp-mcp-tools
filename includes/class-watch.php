@@ -80,11 +80,37 @@ final class WPMCP_Watch {
 	/* Settings                                                            */
 	/* ------------------------------------------------------------------ */
 
-	/** @return array{enabled:int,email:int} */
+	/** @return array{enabled:int,email:int,emails:string} Email is off by default. */
 	public static function settings(): array {
 		$s = get_option( self::OPT, array() );
 		$s = is_array( $s ) ? $s : array();
-		return array( 'enabled' => empty( $s['enabled'] ) ? 0 : 1, 'email' => array_key_exists( 'email', $s ) && empty( $s['email'] ) ? 0 : 1 );
+		return array(
+			'enabled' => empty( $s['enabled'] ) ? 0 : 1,
+			'email'   => empty( $s['email'] ) ? 0 : 1,
+			'emails'  => isset( $s['emails'] ) && is_string( $s['emails'] ) ? $s['emails'] : '',
+		);
+	}
+
+	/**
+	 * Valid addresses from a list separated by commas, semicolons, spaces or new lines.
+	 *
+	 * @return string[]
+	 */
+	public static function parse_emails( string $raw ): array {
+		$out = array();
+		foreach ( preg_split( '/[\s,;]+/', $raw, -1, PREG_SPLIT_NO_EMPTY ) as $item ) {
+			$mail = sanitize_email( $item );
+			if ( $mail && is_email( $mail ) && ! isset( $out[ strtolower( $mail ) ] ) ) {
+				$out[ strtolower( $mail ) ] = $mail;
+			}
+		}
+		return array_values( $out );
+	}
+
+	/** Who gets the alert: the addresses entered, or the admin email when none (or none valid). @return string[] */
+	public static function recipients(): array {
+		$list = self::parse_emails( self::settings()['emails'] );
+		return $list ? $list : array( (string) get_option( 'admin_email' ) );
 	}
 
 	public static function sync_schedule(): void {
@@ -209,7 +235,7 @@ final class WPMCP_Watch {
 		if ( $res && $res['total'] > 0 && $s['email'] ) {
 			$lines = array_merge( array_map( static function ( $p ) { return 'added    ' . $p; }, array_slice( $res['added'], 0, 15 ) ), array_map( static function ( $p ) { return 'changed  ' . $p; }, array_slice( $res['modified'], 0, 15 ) ), array_map( static function ( $p ) { return 'removed  ' . $p; }, array_slice( $res['removed'], 0, 15 ) ) );
 			wp_mail(
-				get_option( 'admin_email' ),
+				self::recipients(),
 				sprintf( '[%s] %d code file change(s) detected', wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ), $res['total'] ),
 				"WP MCP Tools found code files that changed since the baseline:\n\n" . implode( "\n", $lines ) . "\n\nReview them in the dashboard: " . admin_url( 'admin.php?page=wp-mcp-tools&tab=security' ) . "\nIf the changes are expected, press \"Accept changes\" there.\n"
 			);
@@ -392,7 +418,16 @@ final class WPMCP_Watch {
 		$do  = isset( $_POST['do'] ) ? sanitize_key( wp_unslash( $_POST['do'] ) ) : '';
 		$msg = 'watch_saved';
 		if ( 'save' === $do ) {
-			update_option( self::OPT, array( 'enabled' => empty( $_POST['enabled'] ) ? 0 : 1, 'email' => empty( $_POST['email'] ) ? 0 : 1 ), false );
+			$raw = isset( $_POST['emails'] ) ? sanitize_textarea_field( wp_unslash( $_POST['emails'] ) ) : '';
+			update_option(
+				self::OPT,
+				array(
+					'enabled' => empty( $_POST['enabled'] ) ? 0 : 1,
+					'email'   => empty( $_POST['email'] ) ? 0 : 1,
+					'emails'  => implode( ', ', self::parse_emails( $raw ) ),
+				),
+				false
+			);
 			self::sync_schedule();
 			if ( ! empty( $_POST['enabled'] ) && ! is_array( get_option( self::BASE, null ) ) ) {
 				self::set_baseline();
@@ -411,13 +446,13 @@ final class WPMCP_Watch {
 		$s    = self::settings();
 		$l    = self::last();
 		$base = self::baseline_time();
-		$btn  = static function ( string $do, string $label, string $class = '', string $confirm = '' ): void {
+		$btn  = static function ( string $do, string $label, string $class = '', string $confirm = '', string $tip = '' ): void {
 			?>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="wpmcp-inline-form">
 				<input type="hidden" name="action" value="wpmcp_watch">
 				<input type="hidden" name="do" value="<?php echo esc_attr( $do ); ?>">
 				<?php wp_nonce_field( 'wpmcp_watch' ); ?>
-				<button class="wpmcp-btn <?php echo esc_attr( $class ); ?>" type="submit" <?php echo $confirm ? 'data-wpmcp-confirm="' . esc_attr( $confirm ) . '"' : ''; ?>><?php echo esc_html( $label ); ?></button>
+				<button class="wpmcp-btn <?php echo esc_attr( $class ); ?>" type="submit" <?php echo $tip ? 'title="' . esc_attr( $tip ) . '" aria-label="' . esc_attr( $label . '. ' . $tip ) . '"' : ''; ?> <?php echo $confirm ? 'data-wpmcp-confirm="' . esc_attr( $confirm ) . '"' : ''; ?>><?php echo esc_html( $label ); ?></button>
 			</form>
 			<?php
 		};
@@ -433,15 +468,25 @@ final class WPMCP_Watch {
 					<input type="hidden" name="do" value="save">
 					<?php wp_nonce_field( 'wpmcp_watch' ); ?>
 					<p><label><input type="checkbox" name="enabled" value="1" <?php checked( $s['enabled'] ); ?>> Check once a day (needs WP-Cron or a real cron)</label></p>
-					<p><label><input type="checkbox" name="email" value="1" <?php checked( $s['email'] ); ?>> Email <?php echo esc_html( get_option( 'admin_email' ) ); ?> when something changed</label></p>
+					<p><label><input type="checkbox" name="email" value="1" <?php checked( $s['email'] ); ?>> Send an email when something changed</label></p>
+					<p>
+						<label for="wpmcp-watch-emails"><strong>Send to</strong></label><br>
+						<input type="text" id="wpmcp-watch-emails" class="wpmcp-input code" name="emails" value="<?php echo esc_attr( $s['emails'] ); ?>" placeholder="<?php echo esc_attr( (string) get_option( 'admin_email' ) ); ?>" style="width:100%;max-width:520px">
+						<span class="wpmcp-muted" style="display:block">Separate several addresses with a comma. Leave empty to use the admin email (<?php echo esc_html( (string) get_option( 'admin_email' ) ); ?>).</span>
+					</p>
 					<p><button class="wpmcp-btn wpmcp-btn--primary" type="submit">Save</button></p>
 				</form>
 				<p class="wpmcp-muted"><?php echo $base ? esc_html( 'Baseline taken ' . human_time_diff( $base ) . ' ago.' ) : 'No baseline yet. It is taken when you turn the daily check on, or press the button below while the site is clean.'; ?></p>
+				<ul class="wpmcp-list">
+					<li><strong>Check now</strong>: compares the files with the saved baseline and shows what was added, changed or removed. Changes nothing.</li>
+					<li><strong><?php echo $base ? 'Reset baseline' : 'Create baseline'; ?></strong>: saves the files as they are now as the "normal" state. Do it when you believe the site is clean.</li>
+					<li><strong>Accept changes</strong>: shown after a check found differences; use it when you know they are legitimate.</li>
+				</ul>
 				<div class="wpmcp-btnrow">
-					<?php $btn( 'check', 'Check now' ); ?>
-					<?php $btn( 'baseline', $base ? 'Reset baseline' : 'Create baseline', '', 'Take the current files as normal?' ); ?>
+					<?php $btn( 'check', 'Check now', '', '', 'Compares the code files on this site with the saved baseline right now and lists what was added, changed or removed. It changes nothing.' ); ?>
+					<?php $btn( 'baseline', $base ? 'Reset baseline' : 'Create baseline', '', 'Take the current files as normal?', 'Saves how the code files look now (name, size, date) as the "normal" state to compare against later. Do it while you believe the site is clean. It does not scan for malware.' ); ?>
 					<?php if ( ! empty( $l['total'] ) ) : ?>
-						<?php $btn( 'accept', 'Accept changes', 'wpmcp-btn--primary', 'Treat the files as they are now as normal?' ); ?>
+						<?php $btn( 'accept', 'Accept changes', 'wpmcp-btn--primary', 'Treat the files as they are now as normal?', 'Use this when you know the listed changes are legitimate (you edited or installed something). They become the new baseline and the warning disappears.' ); ?>
 					<?php endif; ?>
 				</div>
 				<?php if ( $l ) : ?>

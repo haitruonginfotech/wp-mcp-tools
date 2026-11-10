@@ -117,6 +117,15 @@ class WPMCP_OAuth_Server {
 		return self::wellknown_ok() || ! self::pretty() ? self::base() : self::base() . '/wpmcp-oauth';
 	}
 
+	/** Where clients will fetch the authorization-server metadata, given the issuer in use. */
+	public static function server_metadata_url(): string {
+		if ( self::wellknown_ok() ) {
+			$host = wp_parse_url( self::base() );
+			return $host['scheme'] . '://' . $host['host'] . ( isset( $host['port'] ) ? ':' . $host['port'] : '' ) . '/.well-known/oauth-authorization-server';
+		}
+		return self::pretty() ? self::issuer() . '/.well-known/openid-configuration' : self::endpoint( 'server-metadata' );
+	}
+
 	public static function resource_metadata_url(): string {
 		if ( ! self::pretty() || ! self::wellknown_ok() ) {
 			return self::endpoint( 'resource-metadata' );

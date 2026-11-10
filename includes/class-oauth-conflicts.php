@@ -29,9 +29,7 @@ class WPMCP_Oauth_Conflicts {
 		$rows = array();
 
 		if ( $http && WPMCP_OAuth_Server::pretty() ) {
-			$host = wp_parse_url( WPMCP_OAuth_Server::base() );
-			$root = $host['scheme'] . '://' . $host['host'] . ( isset( $host['port'] ) ? ':' . $host['port'] : '' );
-			$res  = WPMCP_Diagnose::probe( $root . '/.well-known/' . self::MARKER );
+			$res  = WPMCP_Diagnose::probe( WPMCP_OAuth_Server::server_metadata_url() );
 			$row  = self::analyse( $res['code'], is_array( $res['json'] ) ? $res['json'] : null, WPMCP_OAuth_Server::endpoint( 'authorize' ) );
 			if ( null !== $row ) {
 				if ( 'fail' === $row['status'] ) {
