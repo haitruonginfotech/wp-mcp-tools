@@ -80,6 +80,11 @@ final class WPMCP_Watch {
 	/* Settings                                                            */
 	/* ------------------------------------------------------------------ */
 
+	/** A small "?" that explains itself on hover or keyboard focus. Returns HTML. */
+	private static function tip( string $text ): string {
+		return '<span class="wpmcp-tip" tabindex="0" role="note" data-tip="' . esc_attr( $text ) . '" aria-label="' . esc_attr( $text ) . '">?</span>';
+	}
+
 	/** @return array{enabled:int,email:int,emails:string} Email is off by default. */
 	public static function settings(): array {
 		$s = get_option( self::OPT, array() );
@@ -452,7 +457,9 @@ final class WPMCP_Watch {
 				<input type="hidden" name="action" value="wpmcp_watch">
 				<input type="hidden" name="do" value="<?php echo esc_attr( $do ); ?>">
 				<?php wp_nonce_field( 'wpmcp_watch' ); ?>
-				<button class="wpmcp-btn <?php echo esc_attr( $class ); ?>" type="submit" <?php echo $tip ? 'title="' . esc_attr( $tip ) . '" aria-label="' . esc_attr( $label . '. ' . $tip ) . '"' : ''; ?> <?php echo $confirm ? 'data-wpmcp-confirm="' . esc_attr( $confirm ) . '"' : ''; ?>><?php echo esc_html( $label ); ?></button>
+				<span class="wpmcp-tipwrap" <?php echo $tip ? 'data-tip="' . esc_attr( $tip ) . '"' : ''; ?>>
+					<button class="wpmcp-btn <?php echo esc_attr( $class ); ?>" type="submit" <?php echo $tip ? 'aria-label="' . esc_attr( $label . '. ' . $tip ) . '"' : ''; ?> <?php echo $confirm ? 'data-wpmcp-confirm="' . esc_attr( $confirm ) . '"' : ''; ?>><?php echo esc_html( $label ); ?></button>
+				</span>
 			</form>
 			<?php
 		};
@@ -467,10 +474,10 @@ final class WPMCP_Watch {
 					<input type="hidden" name="action" value="wpmcp_watch">
 					<input type="hidden" name="do" value="save">
 					<?php wp_nonce_field( 'wpmcp_watch' ); ?>
-					<p><label><input type="checkbox" name="enabled" value="1" <?php checked( $s['enabled'] ); ?>> Check once a day (needs WP-Cron or a real cron)</label></p>
-					<p><label><input type="checkbox" name="email" value="1" <?php checked( $s['email'] ); ?>> Send an email when something changed</label></p>
+					<p><label><input type="checkbox" name="enabled" value="1" <?php checked( $s['enabled'] ); ?>> Check once a day (needs WP-Cron or a real cron)</label> <?php echo self::tip( 'WordPress compares your code files with the saved baseline once a day, by itself. It also takes the baseline the first time you turn this on. It needs WP-Cron (visitors to the site trigger it) or a real server cron. Without this, nothing is checked until you press Check now.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></p>
+					<p><label><input type="checkbox" name="email" value="1" <?php checked( $s['email'] ); ?>> Send an email when something changed</label> <?php echo self::tip( 'When the daily check finds a file that was added, changed or removed, a short email lists them. Off by default. It only works together with the daily check. Choose who receives it in the Send to box below.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></p>
 					<p>
-						<label for="wpmcp-watch-emails"><strong>Send to</strong></label><br>
+						<label for="wpmcp-watch-emails"><strong>Send to</strong></label> <?php echo self::tip( 'Who gets the alert email. Separate several addresses with a comma. Leave it empty to use the site admin email. Invalid addresses are dropped when you save.' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?><br>
 						<input type="text" id="wpmcp-watch-emails" class="wpmcp-input code" name="emails" value="<?php echo esc_attr( $s['emails'] ); ?>" placeholder="<?php echo esc_attr( (string) get_option( 'admin_email' ) ); ?>" style="width:100%;max-width:520px">
 						<span class="wpmcp-muted" style="display:block">Separate several addresses with a comma. Leave empty to use the admin email (<?php echo esc_html( (string) get_option( 'admin_email' ) ); ?>).</span>
 					</p>

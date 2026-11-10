@@ -283,3 +283,12 @@
 .wpmcp-list { margin: 0 0 12px 18px; list-style: disc; }
 .wpmcp-list li { margin: 4px 0; }
 .wpmcp-btnrow { margin: 4px 0 14px; }
+
+/* Tooltips (v0.15.7): a "?" icon or a wrapper; the text comes from data-tip, shown on hover and keyboard focus. */
+.wpmcp-tip { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 6px; border-radius: 50%; background: var(--w-line, #d0d7de); color: #1d2327; font: 600 11px/1 system-ui, sans-serif; cursor: help; vertical-align: middle; }
+.wpmcp-tip, .wpmcp-tipwrap { position: relative; }
+.wpmcp-tipwrap { display: inline-block; }
+.wpmcp-tip::after, .wpmcp-tipwrap[data-tip]::after { content: attr(data-tip); position: absolute; z-index: 50; left: 0; top: calc(100% + 8px); width: max-content; max-width: 320px; padding: 8px 10px; border-radius: 6px; background: #1d2327; color: #fff; font: 400 12px/1.45 system-ui, sans-serif; text-align: left; white-space: normal; box-shadow: 0 4px 14px rgba(0, 0, 0, .25); opacity: 0; visibility: hidden; transform: translateY(-2px); transition: opacity .12s, transform .12s; pointer-events: none; }
+.wpmcp-tip:hover::after, .wpmcp-tip:focus::after, .wpmcp-tipwrap[data-tip]:hover::after, .wpmcp-tipwrap[data-tip]:focus-within::after { opacity: 1; visibility: visible; transform: none; }
+@media (prefers-reduced-motion: reduce) { .wpmcp-tip::after, .wpmcp-tipwrap[data-tip]::after { transition: none; } }
+.wpmcp-tipwrap[data-tip]::after { top: auto; bottom: calc(100% + 8px); }
