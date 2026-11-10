@@ -24,6 +24,9 @@ class WPMCP_Plugin {
 		'WPMCP_Diagnose',
 		'WPMCP_Elementor',
 		'WPMCP_Activity',
+		'WPMCP_Seo',
+		'WPMCP_Integrity',
+		'WPMCP_Watch',
 	);
 
 	public static function init(): void {
@@ -40,6 +43,7 @@ class WPMCP_Plugin {
 		WPMCP_Activity::init(); // Optional add-on (v0.12.0).
 		WPMCP_Undo::init(); // Optional add-on (v0.13.0).
 		WPMCP_Unlock::init(); // Optional add-on (v0.14.0).
+		WPMCP_Watch::init(); // Optional add-on (v0.15.0).
 
 		foreach ( self::MODULES as $module ) {
 			$module::register();

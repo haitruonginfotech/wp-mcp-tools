@@ -44,6 +44,8 @@ Each group is a switch under *MCP Tools → Tools*. Groups marked **off** stay d
 | plugin-read (**off**) | list-editable-plugins, list-plugin-files, read-plugin-file, search-plugin-files |
 | plugin-write (**off**) | write-plugin-file, edit-plugin-file, delete-plugin-file, list-plugin-backups, restore-plugin-backup |
 | manage (**off**) | activate-plugin, deactivate-plugin, install-plugin, update-plugin, delete-plugin, switch-theme, install-theme, update-theme |
+| seo | audit-seo, audit-geo |
+| security | check-integrity, scan-suspicious, site-health, file-watch-baseline, file-watch-check, list-activity (site group) |
 | elementor (needs Elementor 4.x) | Elementor's own abilities, named `elementor-<name>` |
 
 Extend with your own tools:
@@ -178,6 +180,17 @@ Each connection has an access level, set in *MCP Tools → Connection → Connec
 
 A level can only take rights away; WordPress capability checks still apply. Elementor tools count as writes below Full, except those Elementor marks read-only. `get-site-info` reports the level in force.
 
+## SEO, GEO and security checks (read-only)
+
+Ask your AI to run these; all only read, and they report instead of fixing (the AI can then fix content with the normal tools). Turn the `seo` and `security` groups off on the Tools tab if you do not want them.
+
+- **`audit-seo`**: site switches (search-engine visibility, permalinks, HTTPS, sitemap) and per-post checks (title and meta description length, own H1, images without alt text, internal links, noindex, featured image). Reads Yoast, Rank Math, SEOPress and AIOSEO fields. Scores and sorts posts worst first.
+- **`audit-geo`**: AI-search readiness: `llms.txt`, robots.txt rules that block AI crawlers (GPTBot, ClaudeBot, PerplexityBot, Google-Extended...), JSON-LD on the home page, and per post signals (author, last update, question headings, a short direct answer at the top).
+- **`check-integrity`**: compares WordPress core and wordpress.org plugin files with the official checksums; reports modified, missing and unknown files. Premium or custom plugins are listed as not verifiable.
+- **`scan-suspicious`**: PHP files in uploads, `.htaccess` PHP handlers in uploads, webshell-style code, unknown PHP files in the root, recently changed code files, new administrators, active plugins whose files are gone. These are indicators to review, **not an antivirus verdict**: legitimate code can match and malware can be missed. Use a dedicated scanner as well.
+- **`site-health`**: updates waiting, SSL expiry, WP-Cron lateness, free disk, debug settings and recent PHP fatal errors. Uptime cannot be measured from inside the site; use an external monitor.
+- **File change watch** (*MCP Tools → Security*, tools `file-watch-baseline` and `file-watch-check`): remembers size and time of code files (plugins, themes, mu-plugins, PHP in uploads, root PHP and `.htaccess`), checks once a day if you turn it on, shows an admin notice and can email the admin when something is added, changed or removed. Updates made through WordPress re-baseline automatically. It is a tripwire on size and time, not a content hash; pair it with `check-integrity`.
+
 ## Activity log
 
 *MCP Tools → Connection → Activity* lists the last 30 changes AI connections made: when, which app or Application Password, which tool, the target (an ID or name) and the result (`ok`, `error`, `refused`). Calls an access level stopped are listed as `refused`. Reading is not logged, and neither tool input, content, IP addresses nor credentials are stored (200 rows kept). The same list is available to an administrator's AI through the `list-activity` tool.
@@ -212,6 +225,7 @@ If the site sets `DISALLOW_FILE_EDIT` (in `wp-config.php` or a security plugin s
 
 | Version | Date | Changes |
 |---|---|---|
+| 0.15.0 | 2026-11-10 | New read-only groups: `seo` (`audit-seo`, `audit-geo`) and `security` (`check-integrity`, `scan-suspicious`, `site-health`, `file-watch-baseline`, `file-watch-check`). New Security tab with a file change watch (daily check, admin notice, optional email, auto re-baseline after WordPress updates). Indicators for review, not an antivirus. Sign-in discovery now works on hosts whose web server blocks `/.well-known/` (path issuer under `/wpmcp-oauth`), so clients no longer fall back to another plugin's `/authorize`. |
 | 0.14.0 | 2026-11-06 | Temporary unlock of `DISALLOW_FILE_EDIT` for MCP file tools (1/4/24 hours), with a red admin notice, activity log entries and automatic relock; nothing in the security plugin or wp-config.php is changed. Deactivating clears the unlock; `uninstall.php` removes the add-on options. |
 | 0.13.0 | 2026-11-06 | Undo button in the Activity panel (posts, options, AI-created posts, trashed posts; refused if changed again since). Admin warning when one connection is refused 5+ times in an hour; rate-limit hits are logged once a minute. |
 | 0.12.0 | 2026-11-06 | Activity log: every change an AI connection makes (and every call an access level refused) is listed in the admin and through the new `list-activity` tool. No content, input or IP is stored. |

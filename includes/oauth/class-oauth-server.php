@@ -82,8 +82,36 @@ class WPMCP_OAuth_Server {
 			: add_query_arg( 'wpmcp_oauth', $name, self::base() . '/' );
 	}
 
-	public static function resource_metadata_url(): string {
+	/**
+	 * Does /.well-known/ reach WordPress on this host? Some hosts (nginx on SiteGround and others) answer
+	 * /.well-known/ themselves with a static 404. Then clients cannot discover us and fall back to the default
+	 * /authorize, /token, /register at the site root, which another plugin (Royal MCP) may be serving.
+	 * Cached for an hour.
+	 */
+	public static function wellknown_ok(): bool {
 		if ( ! self::pretty() ) {
+			return false;
+		}
+		$cached = get_transient( 'wpmcp_wk_ok' );
+		if ( false !== $cached ) {
+			return '1' === $cached;
+		}
+		$host = wp_parse_url( self::base() );
+		$root = $host['scheme'] . '://' . $host['host'] . ( isset( $host['port'] ) ? ':' . $host['port'] : '' );
+		$path = (string) wp_parse_url( self::mcp_url(), PHP_URL_PATH );
+		$res  = WPMCP_Diagnose::probe( $root . '/.well-known/oauth-protected-resource' . $path );
+		$ok   = 200 === $res['code'] && is_array( $res['json'] ) && isset( $res['json']['resource'] ) && self::mcp_url() === $res['json']['resource'];
+		set_transient( 'wpmcp_wk_ok', $ok ? '1' : '0', HOUR_IN_SECONDS );
+		return $ok;
+	}
+
+	/** Issuer URL. A path issuer lets clients find the metadata under it when /.well-known/ is blocked by the host. */
+	public static function issuer(): string {
+		return self::wellknown_ok() || ! self::pretty() ? self::base() : self::base() . '/wpmcp-oauth';
+	}
+
+	public static function resource_metadata_url(): string {
+		if ( ! self::pretty() || ! self::wellknown_ok() ) {
 			return self::endpoint( 'resource-metadata' );
 		}
 		$host = wp_parse_url( self::base() );
@@ -108,7 +136,9 @@ class WPMCP_OAuth_Server {
 			$rel  = ( '' !== $home && 0 === strpos( $path, $home ) ) ? substr( $path, strlen( $home ) ) : $path;
 
 			foreach ( array( $path, $rel ) as $p ) {
-				if ( 0 === strpos( $p, '/.well-known/oauth-protected-resource' ) ) {
+				if ( preg_match( '~^/wpmcp-oauth/\.well-known/(oauth-authorization-server|openid-configuration)/?$~', $p ) ) {
+					$endpoint = 'server-metadata';
+				} elseif ( 0 === strpos( $p, '/.well-known/oauth-protected-resource' ) ) {
 					$endpoint = 'resource-metadata';
 				} elseif ( 0 === strpos( $p, '/.well-known/oauth-authorization-server' ) || 0 === strpos( $p, '/.well-known/openid-configuration' ) ) {
 					$endpoint = 'server-metadata';
@@ -225,7 +255,7 @@ class WPMCP_OAuth_Server {
 	public static function resource_metadata(): array {
 		return array(
 			'resource'                 => self::mcp_url(),
-			'authorization_servers'    => array( self::base() ),
+			'authorization_servers'    => array( self::issuer() ),
 			'scopes_supported'         => array( self::SCOPE ),
 			'bearer_methods_supported' => array( 'header' ),
 			'resource_name'            => get_bloginfo( 'name' ) . ' (WP MCP Tools)',
@@ -234,7 +264,7 @@ class WPMCP_OAuth_Server {
 
 	public static function server_metadata(): array {
 		return array(
-			'issuer'                                => self::base(),
+			'issuer'                                => self::issuer(),
 			'authorization_endpoint'                => self::endpoint( 'authorize' ),
 			'token_endpoint'                        => self::endpoint( 'token' ),
 			'registration_endpoint'                 => self::endpoint( 'register' ),

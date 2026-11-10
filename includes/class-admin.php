@@ -336,7 +336,7 @@ class WPMCP_Admin {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
-		$tab     = isset( $_GET['tab'] ) && 'tools' === $_GET['tab'] ? 'tools' : 'connection'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$tab     = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'tools', 'security' ), true ) ? sanitize_key( $_GET['tab'] ) : 'connection'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$mcp_on  = WPMCP_Settings::mcp_enabled();
 		$adapter = class_exists( '\WP\MCP\Core\McpAdapter' );
 		$ok      = $mcp_on && $adapter && function_exists( 'wp_register_ability' );
@@ -356,17 +356,20 @@ class WPMCP_Admin {
 				</div>
 				<div class="wpmcp-hero__side">
 					<span class="wpmcp-state is-<?php echo esc_attr( $state ); ?>"><i></i><?php echo esc_html( $label ); ?></span>
-					<button type="submit" form="wpmcp-settings" class="wpmcp-btn wpmcp-btn--primary">Save changes</button>
+					<?php if ( 'security' !== $tab ) : ?>
+						<button type="submit" form="wpmcp-settings" class="wpmcp-btn wpmcp-btn--primary">Save changes</button>
+					<?php endif; ?>
 				</div>
 			</header>
 
 			<nav class="wpmcp-tabs" aria-label="WP MCP Tools sections">
 				<a class="wpmcp-tab <?php echo 'connection' === $tab ? 'is-active' : ''; ?>" href="<?php echo esc_url( self::url( 'connection' ) ); ?>" <?php echo 'connection' === $tab ? 'aria-current="page"' : ''; ?>><span class="dashicons dashicons-admin-links" aria-hidden="true"></span>Connection</a>
 				<a class="wpmcp-tab <?php echo 'tools' === $tab ? 'is-active' : ''; ?>" href="<?php echo esc_url( self::url( 'tools' ) ); ?>" <?php echo 'tools' === $tab ? 'aria-current="page"' : ''; ?>><span class="dashicons dashicons-screenoptions" aria-hidden="true"></span>Tools <span class="wpmcp-count"><?php echo (int) $active; ?></span></a>
+				<a class="wpmcp-tab <?php echo 'security' === $tab ? 'is-active' : ''; ?>" href="<?php echo esc_url( self::url( 'security' ) ); ?>" <?php echo 'security' === $tab ? 'aria-current="page"' : ''; ?>><span class="dashicons dashicons-shield" aria-hidden="true"></span>Security</a>
 			</nav>
 
 			<?php self::notices(); ?>
-			<?php 'tools' === $tab ? self::render_tools() : self::render_connection(); ?>
+			<?php 'tools' === $tab ? self::render_tools() : ( 'security' === $tab ? WPMCP_Watch::render_tab() : self::render_connection() ); ?>
 		</div>
 		<?php
 	}
@@ -376,6 +379,10 @@ class WPMCP_Admin {
 		$list = array(
 			'signedout' => array( 'success', 'The app was signed out. It can connect again after approval.' ),
 			'removed'   => array( 'success', 'The app registration and its tokens were removed.' ),
+			'watch_saved'    => array( 'success', 'File watch settings saved.' ),
+			'watch_baseline' => array( 'success', 'Baseline saved. The files as they are now count as normal.' ),
+			'watch_checked'  => array( 'success', 'Check finished.' ),
+			'watch_nobase'   => array( 'warning', 'There is no baseline yet. Create one first.' ),
 			'unlocked'  => array( 'warning', 'File editing is unlocked for MCP tools. Lock it again when you are done.' ),
 			'locked'    => array( 'success', 'File editing is locked again. The site is back as it was.' ),
 			'access'    => array( 'success', 'The access level was saved. It applies to the next request the app makes.' ),

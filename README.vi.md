@@ -44,6 +44,8 @@ Mỗi nhóm là một công tắc trong *MCP Tools → Tools*. Nhóm ghi **tắt
 | plugin-read (**tắt**) | list-editable-plugins, list-plugin-files, read-plugin-file, search-plugin-files |
 | plugin-write (**tắt**) | write-plugin-file, edit-plugin-file, delete-plugin-file, list-plugin-backups, restore-plugin-backup |
 | manage (**tắt**) | activate-plugin, deactivate-plugin, install-plugin, update-plugin, delete-plugin, switch-theme, install-theme, update-theme |
+| seo | audit-seo, audit-geo |
+| security | check-integrity, scan-suspicious, site-health, file-watch-baseline, file-watch-check |
 | elementor (cần Elementor 4.x) | Các ability của chính Elementor, đặt tên `elementor-<tên>` |
 
 Thêm tool riêng của bạn:
@@ -178,6 +180,17 @@ Mỗi kết nối có một mức truy cập, đặt ở *MCP Tools → Connecti
 
 Mức truy cập chỉ có thể bớt quyền, các kiểm tra capability của WordPress vẫn áp dụng. Tool Elementor bị coi là ghi khi mức thấp hơn Full, trừ tool Elementor đánh dấu chỉ đọc. `get-site-info` cho biết mức đang áp dụng.
 
+## Kiểm tra SEO, GEO và bảo mật (chỉ đọc)
+
+Nhờ AI chạy các tool này; chúng chỉ đọc và báo cáo, không tự sửa (AI có thể sửa nội dung bằng các tool thông thường). Tắt nhóm `seo` và `security` ở tab Tools nếu không muốn dùng.
+
+- **`audit-seo`**: các công tắc toàn site (hiển thị với công cụ tìm kiếm, permalink, HTTPS, sitemap) và kiểm tra từng bài (độ dài title và meta description, H1 riêng trong nội dung, ảnh thiếu alt, link nội bộ, noindex, ảnh đại diện). Đọc dữ liệu của Yoast, Rank Math, SEOPress, AIOSEO. Chấm điểm và xếp bài tệ nhất lên đầu.
+- **`audit-geo`**: mức sẵn sàng cho tìm kiếm bằng AI: `llms.txt`, robots.txt có chặn bot AI (GPTBot, ClaudeBot, PerplexityBot, Google-Extended...), JSON-LD ở trang chủ, và tín hiệu từng bài (tác giả, ngày cập nhật, tiêu đề dạng câu hỏi, đoạn trả lời ngắn ở đầu bài).
+- **`check-integrity`**: so file WordPress core và plugin trên wordpress.org với checksum chính thức; báo file bị sửa, thiếu, hoặc lạ. Plugin premium hoặc tự viết được liệt kê là không xác minh được.
+- **`scan-suspicious`**: file PHP trong uploads, `.htaccess` đổi cách chạy PHP trong uploads, mã kiểu webshell, file PHP lạ ở thư mục gốc, file code mới sửa, administrator mới, plugin đang bật nhưng mất file. Đây là **dấu hiệu để xem xét, không phải kết luận antivirus**: mã hợp lệ có thể bị khớp và mã độc có thể bị sót. Hãy dùng thêm một trình quét chuyên dụng.
+- **`site-health`**: bản cập nhật đang chờ, hạn SSL, cron trễ, dung lượng đĩa, cài đặt debug, lỗi PHP nghiêm trọng gần đây. Uptime không đo được từ bên trong site; hãy dùng dịch vụ giám sát bên ngoài.
+- **Theo dõi thay đổi file** (*MCP Tools → Security*, tool `file-watch-baseline` và `file-watch-check`): ghi nhớ kích thước và thời gian của file code (plugin, theme, mu-plugins, PHP trong uploads, PHP và `.htaccess` ở thư mục gốc), kiểm tra mỗi ngày nếu bật, hiện thông báo trong admin và có thể gửi email cho admin khi có file thêm, sửa, xoá. Cập nhật qua WordPress tự lập lại mốc. Đây là cảnh báo theo kích thước và thời gian, không phải hash nội dung; hãy dùng kèm `check-integrity`.
+
 ## Nhật ký hoạt động
 
 *MCP Tools → Connection → Activity* liệt kê 30 thay đổi gần nhất mà kết nối AI đã làm: lúc nào, app hoặc Application Password nào, tool nào, đối tượng (ID hoặc tên) và kết quả (`ok`, `error`, `refused`). Lệnh bị mức truy cập chặn hiện là `refused`. Việc đọc không được ghi, và không lưu nội dung, dữ liệu gửi vào tool, địa chỉ IP hay thông tin đăng nhập (giữ tối đa 200 dòng). Quản trị viên cũng xem được danh sách này qua tool `list-activity`.
@@ -212,6 +225,7 @@ Nếu site đặt `DISALLOW_FILE_EDIT` (trong `wp-config.php` hoặc plugin bả
 
 | Phiên bản | Ngày | Nội dung |
 |---|---|---|
+| 0.15.0 | 2026-11-10 | Hai nhóm chỉ đọc mới: `seo` (`audit-seo`, `audit-geo`) và `security` (`check-integrity`, `scan-suspicious`, `site-health`, `file-watch-baseline`, `file-watch-check`). Tab Security mới có theo dõi thay đổi file (kiểm tra hằng ngày, thông báo trong admin, email tuỳ chọn, tự lập lại mốc sau khi WordPress cập nhật). Là dấu hiệu để xem xét, không phải antivirus. Việc tìm trang đăng nhập nay hoạt động cả trên host chặn `/.well-known/` (issuer có đường dẫn `/wpmcp-oauth`), client không còn rơi về `/authorize` của plugin khác. |
 | 0.14.0 | 2026-11-06 | Mở khoá tạm thời `DISALLOW_FILE_EDIT` cho tool ghi file MCP (1/4/24 giờ), có thông báo đỏ trong admin, ghi vào Activity và tự khoá lại; không thay đổi gì trong plugin bảo mật hay wp-config.php. Tắt plugin sẽ xoá mở khoá; `uninstall.php` xoá option của các add-on. |
 | 0.13.0 | 2026-11-06 | Nút Undo trong bảng Activity (bài viết, option, bài do AI tạo, bài bị đưa vào thùng rác; bị từ chối nếu đã đổi lại sau đó). Cảnh báo trong admin khi một kết nối bị từ chối từ 5 lần trong một giờ; lần chạm giới hạn tần suất được ghi mỗi phút một lần. |
 | 0.12.0 | 2026-11-06 | Nhật ký hoạt động: mọi thay đổi do kết nối AI thực hiện (và mọi lệnh bị mức truy cập chặn) được liệt kê trong admin và qua tool mới `list-activity`. Không lưu nội dung, dữ liệu gửi vào hay IP. |

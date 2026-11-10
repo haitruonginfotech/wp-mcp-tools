@@ -28,6 +28,9 @@ class WPMCP_Settings {
 				'theme'       => 1,
 				'theme-write' => 1,
 				'elementor'   => 1,
+				// Read-only audits (v0.15.0).
+				'seo'         => 1,
+				'security'    => 1,
 				// Installing / updating / deleting plugins and themes: opt-in.
 				'manage'      => 0,
 				// Plugin source files: read and write are both opt-in; writes also need a ticked plugin below.
