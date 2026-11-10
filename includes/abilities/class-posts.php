@@ -416,8 +416,8 @@ class WPMCP_Posts {
 
 		if ( ! empty( $input['meta'] ) && is_array( $input['meta'] ) ) {
 			foreach ( $input['meta'] as $key => $value ) {
-				if ( ! current_user_can( 'edit_post_meta', $post_id, (string) $key ) ) {
-					$warnings[] = 'Meta key not allowed: ' . $key;
+				if ( ! WPMCP_Helpers::can_write_meta( (int) $post_id, (string) $key ) ) {
+					$warnings[] = 'Meta key not allowed: ' . $key . ' (WordPress or a plugin protects it; add it to MCP Tools → Connection → Extra meta keys if it should be writable)';
 					continue;
 				}
 				update_post_meta( $post_id, (string) $key, wp_slash( $value ) );
@@ -637,7 +637,7 @@ class WPMCP_Posts {
 		$set     = array();
 		$skipped = array();
 		foreach ( (array) WPMCP_Helpers::arg( $input, 'meta', array() ) as $key => $value ) {
-			if ( ! current_user_can( 'edit_post_meta', $post->ID, (string) $key ) ) {
+			if ( ! WPMCP_Helpers::can_write_meta( (int) $post->ID, (string) $key ) ) {
 				$skipped[] = (string) $key;
 				continue;
 			}
@@ -646,7 +646,7 @@ class WPMCP_Posts {
 		}
 		$deleted = array();
 		foreach ( (array) WPMCP_Helpers::arg( $input, 'delete', array() ) as $key ) {
-			if ( ! current_user_can( 'delete_post_meta', $post->ID, (string) $key ) ) {
+			if ( ! WPMCP_Helpers::can_write_meta( (int) $post->ID, (string) $key, 'delete_post_meta' ) ) {
 				$skipped[] = (string) $key;
 				continue;
 			}

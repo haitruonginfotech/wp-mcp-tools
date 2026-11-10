@@ -544,6 +544,16 @@ class WPMCP_Admin {
 					</div>
 				</div>
 
+				<div class="wpmcp-row wpmcp-row--stack">
+					<div class="wpmcp-row__text">
+						<h3><label for="wpmcp-meta-allow">Extra meta keys AI may write</label></h3>
+						<p>SEO plugins mark their custom fields as protected, so <code>update-post</code> and <code>update-post-meta</code> refuse them with “Meta key not allowed”. Keys listed here are accepted when the user can edit the post. Separate with commas; <code>*</code> at the end matches any suffix. WordPress internals (<code>_wp_*</code>, <code>_edit_lock</code>, <code>_thumbnail_id</code>) can never be added.</p>
+					</div>
+					<div class="wpmcp-row__ctl">
+						<input type="text" id="wpmcp-meta-allow" class="wpmcp-input code" name="<?php echo esc_attr( $opt ); ?>[meta_allow]" value="<?php echo esc_attr( $s['meta_allow'] ); ?>" placeholder="rank_math_*, _yoast_wpseo_*">
+					</div>
+				</div>
+
 				<div class="wpmcp-row wpmcp-row--select">
 					<div class="wpmcp-row__text">
 						<h3><label for="wpmcp-discovery">Sign-in discovery</label></h3>
@@ -845,7 +855,7 @@ class WPMCP_Admin {
 
 	private static function hidden_connection( array $s ): void {
 		$opt = WPMCP_Settings::OPTION;
-		foreach ( array( 'endpoint_capability', 'public_url', 'auth_method', 'discovery' ) as $k ) {
+		foreach ( array( 'endpoint_capability', 'public_url', 'auth_method', 'discovery', 'meta_allow' ) as $k ) {
 			printf( '<input type="hidden" name="%s[%s]" value="%s">', esc_attr( $opt ), esc_attr( $k ), esc_attr( (string) $s[ $k ] ) );
 		}
 		foreach ( array( 'enabled', 'oauth_enabled', 'expose_default_server', 'auto_update' ) as $k ) {

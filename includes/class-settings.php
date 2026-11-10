@@ -47,6 +47,8 @@ class WPMCP_Settings {
 			'oauth_enabled'         => 1,
 			// Public base URL override (tunnel / proxy). Empty = home_url().
 			'public_url'            => '',
+			// Meta keys MCP may write even when a plugin marks them protected (comma separated, trailing * = prefix).
+			'meta_allow'            => 'rank_math_*,_yoast_wpseo_*,_aioseo_*,_seopress_*',
 			// Where clients find the sign-in metadata: auto (probe), path (/wpmcp-oauth/..., for hosts that block /.well-known/), wellknown.
 			'discovery'             => 'auto',
 			// Auth method shown in the "Connect your AI client" instructions.
@@ -159,6 +161,14 @@ class WPMCP_Settings {
 		$url               = trim( (string) ( $input['public_url'] ?? '' ) );
 		$out['public_url'] = '' === $url ? '' : untrailingslashit( esc_url_raw( $url, array( 'http', 'https' ) ) );
 
+		$keys = array();
+		foreach ( preg_split( '/[\\s,;]+/', (string) ( $input['meta_allow'] ?? $def['meta_allow'] ), -1, PREG_SPLIT_NO_EMPTY ) as $k ) {
+			$k = preg_replace( '/[^A-Za-z0-9_\\-*]/', '', $k );
+			if ( '' !== $k && '*' !== $k && 0 !== strpos( $k, '_wp_' ) ) {
+				$keys[ $k ] = $k;
+			}
+		}
+		$out['meta_allow']  = implode( ',', array_slice( array_values( $keys ), 0, 50 ) );
 		$out['discovery']   = in_array( $input['discovery'] ?? '', array( 'auto', 'path', 'wellknown' ), true ) ? $input['discovery'] : $def['discovery'];
 		$out['auth_method'] = in_array( $input['auth_method'] ?? '', array( 'oauth', 'app_password' ), true ) ? $input['auth_method'] : $def['auth_method'];
 

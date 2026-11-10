@@ -210,4 +210,41 @@ class WPMCP_Helpers {
 		}
 		return implode( '/', $parts );
 	}
+
+	/**
+	 * Meta key patterns that MCP may write even when WordPress or a plugin marks them protected
+	 * (SEO plugins do this for their own keys). A trailing * matches any suffix.
+	 *
+	 * @return string[]
+	 */
+	public static function meta_allowlist(): array {
+		$raw = (string) WPMCP_Settings::get( 'meta_allow' );
+		return array_values( array_filter( array_map( 'trim', explode( ',', $raw ) ) ) );
+	}
+
+	public static function meta_key_allowlisted( string $key ): bool {
+		foreach ( self::meta_allowlist() as $pattern ) {
+			$star = '*' === substr( $pattern, -1 );
+			if ( $star ? 0 === strpos( $key, rtrim( $pattern, '*' ) ) : $key === $pattern ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * May the current user change this meta key? WordPress decides first; an allowlisted key is also accepted
+	 * when the user can edit the post itself. WordPress internals (_edit_lock, _wp_*, _thumbnail_id) are never opened.
+	 *
+	 * @param string $cap edit_post_meta or delete_post_meta.
+	 */
+	public static function can_write_meta( int $post_id, string $key, string $cap = 'edit_post_meta' ): bool {
+		if ( current_user_can( $cap, $post_id, $key ) ) {
+			return true;
+		}
+		if ( 0 === strpos( $key, '_wp_' ) || in_array( $key, array( '_edit_lock', '_edit_last', '_thumbnail_id' ), true ) ) {
+			return false;
+		}
+		return self::meta_key_allowlisted( $key ) && current_user_can( 'edit_post', $post_id );
+	}
 }
