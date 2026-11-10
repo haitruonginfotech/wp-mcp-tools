@@ -125,16 +125,16 @@ class WPMCP_Diagnose {
 		}
 
 		if ( defined( 'DISALLOW_FILE_EDIT' ) && DISALLOW_FILE_EDIT ) {
-			$checks[] = self::check( 'file_edit', 'info', 'DISALLOW_FILE_EDIT is set: theme and plugin file tools are refused unless the temporary unlock is open (WP MCP Tools, Connection tab).' );
+			$checks[] = self::check( 'file_edit', 'info', 'DISALLOW_FILE_EDIT is set: theme and plugin file tools are refused unless the temporary unlock is open (WP MCP Tools, Tools tab).' );
 		} elseif ( get_option( 'sg_security_disable_file_edit' ) ) {
-			$checks[] = self::check( 'file_edit', 'info', 'SiteGround Security "Disable Themes and Plugins Editor" is on (no constant is defined): theme and plugin file tools are refused unless the temporary unlock is open (WP MCP Tools, Connection tab).' );
+			$checks[] = self::check( 'file_edit', 'info', 'SiteGround Security "Disable Themes and Plugins Editor" is on (no constant is defined): theme and plugin file tools are refused unless the temporary unlock is open (WP MCP Tools, Tools tab).' );
 		} elseif ( class_exists( 'WPMCP_Unlock' ) && WPMCP_Unlock::locked_by_site() ) {
 			$checks[] = self::check( 'file_edit', 'info', 'Something blocks file editing for administrators (a security plugin): theme and plugin file tools are refused unless the temporary unlock is open.' );
 		} else {
 			$checks[] = self::check( 'file_edit', 'ok', 'Theme file writes are allowed.' );
 		}
 		if ( class_exists( 'WPMCP_Unlock' ) && WPMCP_Unlock::until() > 0 ) {
-			$checks[] = self::check( 'file_edit_unlock', 'warn', 'The temporary file-editing unlock is OPEN until ' . wp_date( 'Y-m-d H:i', WPMCP_Unlock::until() ) . '. Lock it again when you are done (WP MCP Tools, Connection tab).' );
+			$checks[] = self::check( 'file_edit_unlock', 'warn', 'The temporary file-editing unlock is OPEN until ' . wp_date( 'Y-m-d H:i', WPMCP_Unlock::until() ) . '. Lock it again when you are done (WP MCP Tools, Tools tab).' );
 		}
 		if ( defined( 'DISALLOW_FILE_MODS' ) && DISALLOW_FILE_MODS ) {
 			$checks[] = self::check( 'file_mods', 'info', 'DISALLOW_FILE_MODS is set: plugin/theme install, update and delete (and WordPress auto-updates) are disabled.' );

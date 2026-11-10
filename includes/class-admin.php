@@ -675,7 +675,6 @@ class WPMCP_Admin {
 		</section>
 
 		<?php /* Optional add-on (v0.12.0): remove this line, class-activity.php and its register call. */ ?>
-		<?php WPMCP_Unlock::render(); ?>
 		<?php WPMCP_Activity::render(); ?>
 
 		<?php /* Optional add-on (v0.10.0): remove this line, class-connection-check.php and its require to drop it. */ ?>
@@ -916,7 +915,7 @@ class WPMCP_Admin {
 								<h3><?php echo esc_html( $group['label'] ); ?> <span class="wpmcp-count"><?php echo (int) ( $counts[ $slug ] ?? 0 ); ?></span></h3>
 								<p><?php echo esc_html( $group['description'] ); ?></p>
 								<?php if ( ! $available ) : ?>
-									<p class="wpmcp-bad">Unavailable: dependency not active<?php echo in_array( $slug, array( 'theme-write', 'plugin-write' ), true ) ? ' or DISALLOW_FILE_EDIT is set' : ''; ?>.</p>
+									<p class="wpmcp-bad">Unavailable: dependency not active<?php echo in_array( $slug, array( 'theme-write', 'plugin-write' ), true ) ? ' or file editing is blocked on this site (see “File editing lock” below)' : ''; ?>.</p>
 								<?php endif; ?>
 							</div>
 							<?php self::switch_input( WPMCP_Settings::OPTION . '[groups][' . $slug . ']', $on, $group['label'] ); ?>
@@ -930,6 +929,8 @@ class WPMCP_Admin {
 				</div>
 			</section>
 		</form>
+
+		<?php WPMCP_Unlock::render(); // File editing lock: only when a file-write group is on and something blocks file editing. ?>
 
 		<section class="wpmcp-panel">
 			<div class="wpmcp-panel__head wpmcp-panel__head--row">

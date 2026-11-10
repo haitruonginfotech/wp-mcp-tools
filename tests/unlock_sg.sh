@@ -8,7 +8,8 @@ wp_set_current_user( 1 );
 $s = WPMCP_Settings::all(); $s['groups']['theme-write'] = 1; update_option( WPMCP_Settings::OPTION, $s );
 delete_option( WPMCP_Unlock::OPTION );
 update_option( 'sg_security_disable_file_edit', '1' );
-add_filter( 'map_meta_cap', static function ( $caps, $cap ) { return in_array( $cap, array( 'edit_themes', 'edit_plugins', 'edit_files' ), true ) ? array( 'do_not_allow' ) : $caps; }, 10, 2 );
+$blk = static function ( $caps, $cap ) { return in_array( $cap, array( 'edit_themes', 'edit_plugins', 'edit_files' ), true ) ? array( 'do_not_allow' ) : $caps; };
+add_filter( 'map_meta_cap', $blk, 10, 2 );
 $write = static function () { return wp_get_ability( 'wpmcp/write-theme-file' )->execute( array( 'path' => 'wpmcp-sg-test.css', 'content' => '/* t */', 'verify' => false ) ); };
 $f = get_stylesheet_directory() . '/wpmcp-sg-test.css';
 
@@ -38,10 +39,20 @@ $out['refused_again'] = is_wp_error( $r ) && ! file_exists( $f );
 $d = wp_get_ability( 'wpmcp/diagnose' )->execute( array( 'skip_http' => true ) );
 $txt = wp_json_encode( $d );
 $out['diagnose_mentions_sg'] = false !== strpos( $txt, 'SiteGround Security' );
+// The panel belongs to the Tools tab and only shows when it matters.
+$panel = static function () { ob_start(); WPMCP_Unlock::render(); return ob_get_clean(); };
+$st = WPMCP_Settings::all(); $st['groups']['theme-write'] = 0; $st['groups']['plugin-write'] = 0; update_option( WPMCP_Settings::OPTION, $st );
+$out['panel_hidden_groups_off'] = '' === $panel();
+$st['groups']['theme-write'] = 1; update_option( WPMCP_Settings::OPTION, $st );
+$p = $panel();
+$out['panel_shown_group_on_and_locked'] = false !== strpos( $p, 'File editing lock' );
+$out['panel_has_unlock_form'] = false !== strpos( $panel(), 'Unlock file editing' );
 delete_option( 'sg_security_disable_file_edit' );
+remove_filter( 'map_meta_cap', $blk, 10 );
+$out['panel_hidden_when_not_locked'] = '' === $panel();
 echo json_encode( $out );
 PHP
 SGU="$(WPDIR="$WP" PORT="$PORT" php "$WORK/unlock_sg.php" 2>&1 | tail -1)"
-for k in detected_without_constant refused_with_reason nothing_written works_when_unlocked dashboard_still_locked reason_when_open read_tool_unaffected admin_bar_warns admin_bar_gone refused_again diagnose_mentions_sg; do
+for k in detected_without_constant refused_with_reason nothing_written works_when_unlocked dashboard_still_locked reason_when_open read_tool_unaffected admin_bar_warns admin_bar_gone refused_again diagnose_mentions_sg panel_hidden_groups_off panel_shown_group_on_and_locked panel_has_unlock_form panel_hidden_when_not_locked; do
   if echo "$SGU" | grep -q "\"$k\":true"; then echo "PASS unlock_sg: $k"; else echo "FAIL unlock_sg: $k ($SGU)"; STATUS=1; fi
 done

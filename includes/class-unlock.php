@@ -81,7 +81,7 @@ final class WPMCP_Unlock {
 		if ( self::until() > 0 ) {
 			$msg = 'The temporary file-editing unlock is open, but something else still blocks ' . $capability . ' (a security plugin or the host). Run the wpmcp-diagnose tool and look at file_edit.';
 		} else {
-			$msg = 'File editing is locked on this site (DISALLOW_FILE_EDIT or a security plugin such as SiteGround Security). In WordPress open WP MCP Tools, Connection tab, File editing lock, and unlock it for 1 to 24 hours. It locks itself again afterwards.';
+			$msg = 'File editing is locked on this site (DISALLOW_FILE_EDIT or a security plugin such as SiteGround Security). In WordPress open WP MCP Tools, Tools tab, File editing lock, and unlock it for 1 to 24 hours. It locks itself again afterwards.';
 		}
 		return new WP_Error( 'wpmcp_file_edit_locked', $msg, array( 'status' => 403 ) );
 	}
@@ -95,7 +95,7 @@ final class WPMCP_Unlock {
 			array(
 				'id'    => 'wpmcp-unlocked',
 				'title' => '<span style="background:#b32d2e;color:#fff;padding:2px 8px;border-radius:3px;font-weight:600">' . esc_html( sprintf( 'MCP file editing UNLOCKED until %s', wp_date( get_option( 'time_format' ), self::until() ) ) ) . '</span>',
-				'href'  => WPMCP_Admin::url( 'connection' ) . '#file-lock',
+				'href'  => WPMCP_Admin::url( 'tools' ) . '#file-lock',
 				'meta'  => array( 'title' => 'AI connections can edit theme and plugin files. Click to lock it again.' ),
 			)
 		);
@@ -148,7 +148,7 @@ final class WPMCP_Unlock {
 		if ( self::locked_by_site() ) {
 			self::unlock( isset( $_POST['hours'] ) ? absint( $_POST['hours'] ) : 1, get_current_user_id() );
 		}
-		wp_safe_redirect( WPMCP_Admin::url( 'connection', array( 'wpmcp_msg' => 'unlocked' ) ) . '#file-lock' );
+		wp_safe_redirect( WPMCP_Admin::url( 'tools', array( 'wpmcp_msg' => 'unlocked' ) ) . '#file-lock' );
 		exit;
 	}
 
@@ -158,7 +158,7 @@ final class WPMCP_Unlock {
 		}
 		check_admin_referer( 'wpmcp_lock' );
 		self::lock( get_current_user_id() );
-		wp_safe_redirect( WPMCP_Admin::url( 'connection', array( 'wpmcp_msg' => 'locked' ) ) . '#file-lock' );
+		wp_safe_redirect( WPMCP_Admin::url( 'tools', array( 'wpmcp_msg' => 'locked' ) ) . '#file-lock' );
 		exit;
 	}
 
@@ -170,13 +170,15 @@ final class WPMCP_Unlock {
 		printf(
 			'<div class="notice notice-error"><p><strong>WP MCP Tools: file editing is UNLOCKED</strong> for AI connections until %s. The site\'s file-editing lock is lifted for the theme and plugin file tools. <a href="%s">Lock it again now</a> when you are done.</p></div>',
 			esc_html( wp_date( get_option( 'time_format' ), self::until() ) ),
-			esc_url( WPMCP_Admin::url( 'connection' ) . '#file-lock' )
+			esc_url( WPMCP_Admin::url( 'tools' ) . '#file-lock' )
 		);
 	}
 
-	/** Panel on the Connection screen; only shown when the site is locked. */
+	/** Panel on the Tools screen, under the group switches. */
 	public static function render(): void {
-		if ( ! self::locked_by_site() ) {
+		// Only when it matters: a file-write group is on and file editing is blocked (or the unlock is still open).
+		$wanted = WPMCP_Settings::group_enabled( 'theme-write' ) || WPMCP_Settings::group_enabled( 'plugin-write' );
+		if ( ! ( $wanted && self::locked_by_site() ) && ! self::until() ) {
 			return;
 		}
 		$until = self::until();
