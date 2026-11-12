@@ -41,6 +41,11 @@ $test( 'finds the plugin through the endpoint address', in_array( 'WPMCP Test OA
 $test( 'does not blame this plugin or unrelated ones', ! in_array( 'WP MCP Tools', $o, true ) && 1 === count( $o ), json_encode( $o ) );
 $m = WPMCP_Oauth_Conflicts::other_mcp_plugins( $files );
 $test( 'lists other MCP-looking plugins only', array( 'WPMCP Test OAuth Hijack MCP' ) === $m, json_encode( $m ) );
+$o = WPMCP_Oauth_Conflicts::owners( array(), $files, true );
+$test( 'with_path adds the source file', 1 === count( $o ) && false !== strpos( $o[0], 'plugins/wpmcp-test-oauth-hijack/wpmcp-test-oauth-hijack.php' ), json_encode( $o ) );
+$r = WPMCP_Oauth_Conflicts::shadow_row( 200, array( 'authorization_endpoint' => 'https://x.test/?bsp_mcp=authorize' ), $own, array( 'Theme bespoke-main (themes/bespoke-main/inc/mcp-oauth.php)' ) );
+$test( 'shadow row names the source and stays informational', is_array( $r ) && 'info' === $r['status'] && false !== strpos( $r['detail'], 'themes/bespoke-main/inc/mcp-oauth.php' ), json_encode( $r ) );
+$test( 'no shadow row when the standard address is ours or blocked', null === WPMCP_Oauth_Conflicts::shadow_row( 200, array( 'authorization_endpoint' => $own ), $own, array() ) && null === WPMCP_Oauth_Conflicts::shadow_row( 404, null, $own, array() ) );
 $rows = WPMCP_Diagnose::run( array( 'skip_http' => true ) );
 $has = false;
 foreach ( $rows['checks'] ?? $rows as $row ) { if ( is_array( $row ) && ( $row['check'] ?? '' ) === 'oauth_discovery' ) { $has = true; } }

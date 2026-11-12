@@ -34,7 +34,7 @@ class WPMCP_Oauth_Conflicts {
 			if ( null !== $row ) {
 				if ( 'fail' === $row['status'] ) {
 					$urls   = array_filter( array( (string) ( $res['json']['authorization_endpoint'] ?? '' ), (string) ( $res['json']['token_endpoint'] ?? '' ) ) );
-					$owners = self::owners( $urls, self::active_plugin_files() );
+					$owners = self::owners( $urls, self::active_plugin_files(), true );
 					if ( $owners ) {
 						$row['detail'] .= ' Likely source: ' . implode( ', ', $owners ) . '.';
 						$row['fix']     = sprintf( 'Deactivate %s, remove this connector in your AI client and add it again. Two plugins cannot both own the sign-in documents of one site.', implode( ' or ', $owners ) );
@@ -42,6 +42,18 @@ class WPMCP_Oauth_Conflicts {
 						$row['fix'] = 'No plugin was identified. Check the active theme (functions.php and inc/ files that mention oauth-authorization-server), then look for a static file at /.well-known/' . self::MARKER . ' or a rewrite rule in the web server or a caching layer, and remove it.';
 					}
 				}
+				$rows[] = $row;
+			}
+		}
+
+		if ( $http && WPMCP_OAuth_Server::pretty() && ! WPMCP_OAuth_Server::wellknown_ok() ) {
+			$host = wp_parse_url( WPMCP_OAuth_Server::base() );
+			$root = $host['scheme'] . '://' . $host['host'] . ( isset( $host['port'] ) ? ':' . $host['port'] : '' );
+			$res  = WPMCP_Diagnose::probe( $root . '/.well-known/' . self::MARKER );
+			$doc  = is_array( $res['json'] ) ? $res['json'] : null;
+			$urls = $doc ? array_filter( array( (string) ( $doc['authorization_endpoint'] ?? '' ), (string) ( $doc['token_endpoint'] ?? '' ), (string) ( $doc['registration_endpoint'] ?? '' ) ) ) : array();
+			$row  = self::shadow_row( (int) $res['code'], $doc, WPMCP_OAuth_Server::endpoint( 'authorize' ), $urls ? self::owners( $urls, self::active_plugin_files(), true ) : array() );
+			if ( null !== $row ) {
 				$rows[] = $row;
 			}
 		}
@@ -96,9 +108,10 @@ class WPMCP_Oauth_Conflicts {
 	 *
 	 * @param string[] $urls   Foreign endpoint URLs.
 	 * @param string[] $active Active plugin files (plugin-folder/file.php).
+	 * @param bool     $with_path Append the source file (relative to wp-content) to names found through hooked code.
 	 * @return string[] Plugin names.
 	 */
-	public static function owners( array $urls, array $active ): array {
+	public static function owners( array $urls, array $active, bool $with_path = false ): array {
 		$names = array();
 		$all   = self::plugin_names();
 
@@ -118,7 +131,7 @@ class WPMCP_Oauth_Conflicts {
 		foreach ( self::HOOKS as $hook ) {
 			foreach ( WPMCP_Blockers::callbacks( $hook ) as $c ) {
 				$o = $c['owner'];
-				if ( ! in_array( $o['kind'], array( 'plugin', 'mu-plugin' ), true ) || 'wp-mcp-tools' === $o['slug'] ) {
+				if ( ! in_array( $o['kind'], array( 'plugin', 'mu-plugin', 'theme' ), true ) || 'wp-mcp-tools' === $o['slug'] ) {
 					continue;
 				}
 				$file = self::file_of( $c['cb'] );
@@ -127,11 +140,45 @@ class WPMCP_Oauth_Conflicts {
 				}
 				$seen[ $file ] = true;
 				if ( filesize( $file ) < 1500000 && false !== strpos( (string) file_get_contents( $file ), self::MARKER ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-					$names[ $o['slug'] ] = $o['name'];
+					$names[ $o['slug'] ] = $with_path ? $o['name'] . ' (' . self::short_path( $file ) . ')' : $o['name'];
 				}
 			}
 		}
 		return array_values( $names );
+	}
+
+	/** wp-content relative path, for messages. */
+	public static function short_path( string $file ): string {
+		$file = str_replace( '\\', '/', $file );
+		$base = str_replace( '\\', '/', trailingslashit( WP_CONTENT_DIR ) );
+		return 0 === strpos( $file, $base ) ? substr( $file, strlen( $base ) ) : basename( $file );
+	}
+
+	/**
+	 * Row for the case where this plugin works through its own issuer path because something else answers the
+	 * standard /.well-known/oauth-authorization-server. Pure part: judge the fetched document.
+	 *
+	 * @param int        $code    HTTP status.
+	 * @param array|null $doc     Decoded JSON.
+	 * @param string     $own_url This plugin's authorize endpoint.
+	 * @param string[]   $owners  Names of the likely sources.
+	 * @return array|null Row or null when the standard address is not answered by someone else.
+	 */
+	public static function shadow_row( int $code, ?array $doc, string $own_url, array $owners ): ?array {
+		if ( 200 !== $code || null === $doc || empty( $doc['authorization_endpoint'] ) || 0 === strpos( (string) $doc['authorization_endpoint'], $own_url ) ) {
+			return null;
+		}
+		return array(
+			'check'  => 'oauth_root_shadowed',
+			'status' => 'info',
+			'detail' => sprintf(
+				'Another component answers /.well-known/%1$s (it signs in at %2$s%3$s). WP MCP Tools works next to it through its own issuer path (/wpmcp-oauth), which clients such as Claude and mcp-remote find through the suffixed address. Only the standard address stays with the other component.',
+				self::MARKER,
+				(string) $doc['authorization_endpoint'],
+				$owners ? '; likely source: ' . implode( ', ', $owners ) : ''
+			),
+			'fix'    => 'Nothing to do if the connection works. To give WP MCP Tools the standard address, remove or disable that sign-in code (for example the file named above), then reconnect your AI client.',
+		);
 	}
 
 	/**

@@ -39,7 +39,7 @@ cat > "$WP/wp-content/mu-plugins/zz-foreign-oauth.php" <<'PHP'
 add_action( 'init', static function () {
 	$u = (string) strtok( (string) ( $_SERVER['REQUEST_URI'] ?? '' ), '?' );
 	if ( 0 === strpos( $u, '/.well-known/oauth-authorization-server' ) ) {
-		header( 'Content-Type: application/json' ); echo '{"issuer":"http://foreign.example/"}'; exit;
+		header( 'Content-Type: application/json' ); echo '{"issuer":"http://foreign.example/","authorization_endpoint":"http://foreign.example/?bsp_mcp=authorize"}'; exit;
 	}
 	if ( 0 === strpos( $u, '/.well-known/oauth-protected-resource' ) ) {
 		header( 'Content-Type: application/json' ); echo '{"resource":"http://foreign.example/mcp"}'; exit;
@@ -55,6 +55,8 @@ echo "$OPEN" | grep -q '"issuer":"[^"]*/wpmcp-oauth"' || echo "DEBUG openid resp
 chk own_prm_insertion_url_wins "$(curl -s "$WB/.well-known/oauth-protected-resource/wp-json/wp-mcp-tools/mcp" | grep -c '"resource":"[^"]*/wp-json/wp-mcp-tools/mcp"')"
 chk other_suffix_not_ours "$(curl -s "$WB/.well-known/oauth-protected-resource/wp-json/mcp/mcp-adapter-default-server" | grep -c 'foreign.example')"
 chk foreign_layer_forces_path_issuer "$(hdr | grep -ic 'resource_metadata="[^"]*/wpmcp-oauth/resource-metadata"' | sed 's/^[1-9].*/1/')"
+R="$(WPDIR="$WP" PORT="$PORT" php -r '$_SERVER["HTTP_HOST"]="localhost:".getenv("PORT"); require getenv("WPDIR")."/wp-load.php"; foreach ( WPMCP_Oauth_Conflicts::checks( true ) as $r ) { if ( "oauth_root_shadowed" === $r["check"] ) { echo ( false !== strpos( $r["detail"], "zz-foreign-oauth.php" ) && "info" === $r["status"] ) ? "1" : "0"; exit; } } echo "none";')"
+chk shadow_row_names_the_source_file "$R"
 rm -f "$WP/wp-content/mu-plugins/zz-foreign-oauth.php"
 setdisc auto
 chk without_foreign_layer_wellknown_again "$(hdr | grep -ic 'resource_metadata="[^"]*/.well-known/oauth-protected-resource' | sed 's/^[1-9].*/1/')"
