@@ -40,6 +40,32 @@ class WPMCP_Desktop {
 		return '\\' === DIRECTORY_SEPARATOR ? str_replace( '/', '\\', $file ) : $file;
 	}
 
+	/**
+	 * Certificate Local (by Flywheel) generated for a site, so Node can trust it through NODE_EXTRA_CA_CERTS.
+	 * '' when it is not found (other local stacks, or PHP cannot read it). Filter: wpmcp_local_ca_cert.
+	 */
+	public static function local_ca_cert( string $site_url ): string {
+		$host = strtolower( (string) wp_parse_url( $site_url, PHP_URL_HOST ) );
+		$cert = '';
+		if ( '' !== $host ) {
+			$bases = array();
+			if ( false !== getenv( 'APPDATA' ) && '' !== getenv( 'APPDATA' ) ) {
+				$bases[] = getenv( 'APPDATA' ) . '\\Local';
+			}
+			if ( false !== getenv( 'HOME' ) && '' !== getenv( 'HOME' ) ) {
+				$bases[] = getenv( 'HOME' ) . '/Library/Application Support/Local';
+			}
+			foreach ( $bases as $base ) {
+				$try = $base . '/run/router/nginx/certs/' . $host . '.crt';
+				if ( is_readable( $try ) ) {
+					$cert = '\\' === DIRECTORY_SEPARATOR ? str_replace( '/', '\\', $try ) : $try;
+					break;
+				}
+			}
+		}
+		return (string) apply_filters( 'wpmcp_local_ca_cert', $cert, $site_url );
+	}
+
 	/** True when a path is a Windows path (so Claude Desktop on Windows can use it as is). */
 	public static function is_windows_path( string $path ): bool {
 		return (bool) preg_match( '#^([A-Za-z]:[\\\\/]|\\\\\\\\)#', $path );
@@ -176,7 +202,7 @@ class WPMCP_Desktop {
 	}
 
 	/** JSON for claude_desktop_config.json (manual route, uses the downloaded proxy file). */
-	public static function config_snippet( string $site_url, string $username, string $app_password = '', string $proxy = '' ): string {
+	public static function config_snippet( string $site_url, string $username, string $app_password = '', string $proxy = '', string $ca_cert = '' ): string {
 		$name = self::bundle_name( $site_url );
 		$env  = array(
 			'WP_URL'          => untrailingslashit( $site_url ),
@@ -184,8 +210,13 @@ class WPMCP_Desktop {
 			'WP_APP_PASSWORD' => '' !== $app_password ? $app_password : 'xxxx xxxx xxxx xxxx xxxx xxxx',
 		);
 		if ( self::is_local_site( $site_url ) ) {
-			// Local sites use a self-signed certificate: tell the helper to accept it whatever the host name is.
-			$env['WPMCP_INSECURE_TLS'] = '1';
+			if ( '' !== $ca_cert ) {
+				// Local's own certificate authority: Node verifies the site certificate properly.
+				$env['NODE_EXTRA_CA_CERTS'] = $ca_cert;
+			} else {
+				// Self-signed certificate and no CA file found: accept it whatever the host name is.
+				$env['WPMCP_INSECURE_TLS'] = '1';
+			}
 		}
 		return (string) wp_json_encode(
 			array(

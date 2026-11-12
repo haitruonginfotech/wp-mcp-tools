@@ -800,7 +800,7 @@ class WPMCP_Admin {
 				<div class="wpmcp-row__text">
 					<h3>Option B: config file</h3>
 					<?php if ( '' !== $proxy ) : ?>
-						<p>This site runs on your computer, so the helper is used straight from the plugin folder: nothing to download and the path below is already correct. Add it to <code>claude_desktop_config.json</code> (Windows: <code>%APPDATA%\Claude</code>) and restart Claude Desktop. Needs Node.js 18+. The self-signed HTTPS certificate is accepted automatically.</p>
+						<p>This site runs on your computer, so the helper is used straight from the plugin folder: nothing to download and the path below is already correct. Add it to <code>claude_desktop_config.json</code> (Windows: <code>%APPDATA%\Claude</code>) and restart Claude Desktop. Needs Node.js 18+. HTTPS: if Local's certificate file for this site is found it is added as <code>NODE_EXTRA_CA_CERTS</code>, otherwise the self-signed certificate is accepted automatically.</p>
 						<?php if ( ! WPMCP_Desktop::is_windows_path( $proxy ) ) : ?>
 							<p class="wpmcp-note"><span class="dashicons dashicons-warning" aria-hidden="true"></span>This is not a Windows path. If the site runs in Docker or WSL, Claude Desktop cannot see it: download the helper instead and change the path in <code>args</code>.</p>
 						<?php endif; ?>
@@ -818,7 +818,7 @@ class WPMCP_Admin {
 				</div>
 			</div>
 			<div class="wpmcp-panel__body">
-				<?php self::copy_block( 'claude_desktop_config.json', WPMCP_Desktop::config_snippet( home_url(), $username, $new_pw, $proxy ) ); ?>
+				<?php self::copy_block( 'claude_desktop_config.json', WPMCP_Desktop::config_snippet( home_url(), $username, $new_pw, $proxy, $local ? WPMCP_Desktop::local_ca_cert( home_url() ) : '' ) ); ?>
 			</div>
 		</section>
 		<?php

@@ -27,7 +27,7 @@ names = sorted(z.namelist())
 m = json.loads(z.read('manifest.json'))
 ok = names == ['manifest.json', 'server/index.js'] and z.read('server/index.js') == open(sys.argv[2], 'rb').read()
 print(('PASS' if ok else 'FAIL') + ' mcpb contains manifest.json + the proxy as server/index.js', names)
-ok2 = m['server']['entry_point'] == 'server/index.js' and 'abcd' not in json.dumps(m) and m['version'] == '0.15.8'
+ok2 = m['server']['entry_point'] == 'server/index.js' and 'abcd' not in json.dumps(m) and m['version'] == '0.15.9'
 print(('PASS' if ok2 else 'FAIL') + ' manifest entry point, version, no secret')
 sys.exit(0 if ok and ok2 else 1)
 PY
@@ -48,3 +48,17 @@ echo ( WPMCP_Desktop::is_windows_path( 'C:\\a\\b' ) && WPMCP_Desktop::is_windows
 PHP
 WPDIR="$WP" PORT="$PORT" php "$WORK/desk2.php" | tee "$WORK/desk2.out"
 if grep -q '^FAIL' "$WORK/desk2.out"; then STATUS=1; fi
+
+cat > "$WORK/desk3.php" <<'PHP'
+<?php
+$_SERVER['HTTP_HOST'] = 'localhost:' . getenv( 'PORT' );
+require getenv( 'WPDIR' ) . '/wp-load.php';
+$ca = WPMCP_Desktop::config_snippet( 'https://bespoke.local', 'ad', '', 'C:\\p.cjs', 'C:\\Users\\Hai\\AppData\\Roaming\\Local\\run\\router\\nginx\\certs\\bespoke.local.crt' );
+$e  = json_decode( $ca, true )['mcpServers']['wp-mcp-tools-bespoke-local']['env'];
+echo ( isset( $e['NODE_EXTRA_CA_CERTS'] ) && ! isset( $e['WPMCP_INSECURE_TLS'] ) && false !== strpos( $ca, 'bespoke.local.crt' ) ? 'PASS' : 'FAIL' ) . " snippet with Local CA: NODE_EXTRA_CA_CERTS, no insecure flag\n";
+add_filter( 'wpmcp_local_ca_cert', function () { return 'X:\\ca.crt'; } );
+echo ( 'X:\\ca.crt' === WPMCP_Desktop::local_ca_cert( 'https://bespoke.local' ) ? 'PASS' : 'FAIL' ) . " local_ca_cert filter\n";
+echo ( '' === ( remove_all_filters( 'wpmcp_local_ca_cert' ) ? WPMCP_Desktop::local_ca_cert( 'https://nope.local' ) : 'x' ) ? 'PASS' : 'FAIL' ) . " local_ca_cert empty when no file\n";
+PHP
+WPDIR="$WP" PORT="$PORT" php "$WORK/desk3.php" | tee "$WORK/desk3.out"
+if grep -q '^FAIL' "$WORK/desk3.out"; then STATUS=1; fi
