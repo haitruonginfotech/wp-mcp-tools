@@ -774,6 +774,7 @@ class WPMCP_Admin {
 	/** Claude Desktop / local sites: proxy file + one-click .mcpb bundle + config snippet (class-desktop.php). */
 	private static function render_desktop( string $url, string $username, string $new_pw ): void {
 		$local = WPMCP_Desktop::is_local_site( $url );
+		$proxy = $local ? WPMCP_Desktop::local_proxy_path() : '';
 		?>
 		<section class="wpmcp-panel" id="claude-desktop">
 			<div class="wpmcp-panel__head">
@@ -798,7 +799,14 @@ class WPMCP_Admin {
 			<div class="wpmcp-row">
 				<div class="wpmcp-row__text">
 					<h3>Option B: config file</h3>
-					<p>Save the helper somewhere on your computer, then add this to <code>claude_desktop_config.json</code> (Windows: <code>%APPDATA%\Claude</code>) and restart Claude Desktop. Needs Node.js 18+. Change the path in <code>args</code>.</p>
+					<?php if ( '' !== $proxy ) : ?>
+						<p>This site runs on your computer, so the helper is used straight from the plugin folder: nothing to download and the path below is already correct. Add it to <code>claude_desktop_config.json</code> (Windows: <code>%APPDATA%\Claude</code>) and restart Claude Desktop. Needs Node.js 18+. The self-signed HTTPS certificate is accepted automatically.</p>
+						<?php if ( ! WPMCP_Desktop::is_windows_path( $proxy ) ) : ?>
+							<p class="wpmcp-note"><span class="dashicons dashicons-warning" aria-hidden="true"></span>This is not a Windows path. If the site runs in Docker or WSL, Claude Desktop cannot see it: download the helper instead and change the path in <code>args</code>.</p>
+						<?php endif; ?>
+					<?php else : ?>
+						<p>Save the helper somewhere on your computer, then add this to <code>claude_desktop_config.json</code> (Windows: <code>%APPDATA%\Claude</code>) and restart Claude Desktop. Needs Node.js 18+. Change the path in <code>args</code>.</p>
+					<?php endif; ?>
 					<?php if ( $new_pw ) : ?>
 						<p class="wpmcp-note"><span class="dashicons dashicons-warning" aria-hidden="true"></span>The new Application Password is filled in below. It is shown only once.</p>
 					<?php else : ?>
@@ -810,7 +818,7 @@ class WPMCP_Admin {
 				</div>
 			</div>
 			<div class="wpmcp-panel__body">
-				<?php self::copy_block( 'claude_desktop_config.json', WPMCP_Desktop::config_snippet( home_url(), $username, $new_pw ) ); ?>
+				<?php self::copy_block( 'claude_desktop_config.json', WPMCP_Desktop::config_snippet( home_url(), $username, $new_pw, $proxy ) ); ?>
 			</div>
 		</section>
 		<?php

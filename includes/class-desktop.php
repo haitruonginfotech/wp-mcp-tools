@@ -28,6 +28,23 @@ class WPMCP_Desktop {
 		return WPMCP_DIR . self::PROXY_FILE;
 	}
 
+	/**
+	 * Real path of the bundled helper, for the config file of a local site (PHP and Claude Desktop share the
+	 * computer, so the file can be run straight from the plugin folder). '' when the path is unusable.
+	 */
+	public static function local_proxy_path(): string {
+		$file = realpath( self::proxy_path() );
+		if ( false === $file || ! is_readable( $file ) ) {
+			return '';
+		}
+		return '\\' === DIRECTORY_SEPARATOR ? str_replace( '/', '\\', $file ) : $file;
+	}
+
+	/** True when a path is a Windows path (so Claude Desktop on Windows can use it as is). */
+	public static function is_windows_path( string $path ): bool {
+		return (bool) preg_match( '#^([A-Za-z]:[\\\\/]|\\\\\\\\)#', $path );
+	}
+
 	/** True for addresses a cloud client can never reach. */
 	public static function is_local_site( string $url ): bool {
 		$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
@@ -159,19 +176,24 @@ class WPMCP_Desktop {
 	}
 
 	/** JSON for claude_desktop_config.json (manual route, uses the downloaded proxy file). */
-	public static function config_snippet( string $site_url, string $username, string $app_password = '' ): string {
+	public static function config_snippet( string $site_url, string $username, string $app_password = '', string $proxy = '' ): string {
 		$name = self::bundle_name( $site_url );
+		$env  = array(
+			'WP_URL'          => untrailingslashit( $site_url ),
+			'WP_USERNAME'     => $username,
+			'WP_APP_PASSWORD' => '' !== $app_password ? $app_password : 'xxxx xxxx xxxx xxxx xxxx xxxx',
+		);
+		if ( self::is_local_site( $site_url ) ) {
+			// Local sites use a self-signed certificate: tell the helper to accept it whatever the host name is.
+			$env['WPMCP_INSECURE_TLS'] = '1';
+		}
 		return (string) wp_json_encode(
 			array(
 				'mcpServers' => array(
 					$name => array(
 						'command' => 'node',
-						'args'    => array( 'C:\\path\\to\\wpmcp-proxy.cjs' ),
-						'env'     => array(
-							'WP_URL'          => untrailingslashit( $site_url ),
-							'WP_USERNAME'     => $username,
-							'WP_APP_PASSWORD' => '' !== $app_password ? $app_password : 'xxxx xxxx xxxx xxxx xxxx xxxx',
-						),
+						'args'    => array( '' !== $proxy ? $proxy : 'C:\\path\\to\\wpmcp-proxy.cjs' ),
+						'env'     => $env,
 					),
 				),
 			),

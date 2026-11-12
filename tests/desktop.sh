@@ -27,7 +27,24 @@ names = sorted(z.namelist())
 m = json.loads(z.read('manifest.json'))
 ok = names == ['manifest.json', 'server/index.js'] and z.read('server/index.js') == open(sys.argv[2], 'rb').read()
 print(('PASS' if ok else 'FAIL') + ' mcpb contains manifest.json + the proxy as server/index.js', names)
-ok2 = m['server']['entry_point'] == 'server/index.js' and 'abcd' not in json.dumps(m) and m['version'] == '0.15.7'
+ok2 = m['server']['entry_point'] == 'server/index.js' and 'abcd' not in json.dumps(m) and m['version'] == '0.15.8'
 print(('PASS' if ok2 else 'FAIL') + ' manifest entry point, version, no secret')
 sys.exit(0 if ok and ok2 else 1)
 PY
+
+cat > "$WORK/desk2.php" <<'PHP'
+<?php
+$_SERVER['HTTP_HOST'] = 'localhost:' . getenv( 'PORT' );
+require getenv( 'WPDIR' ) . '/wp-load.php';
+$p   = WPMCP_Desktop::local_proxy_path();
+echo ( '' !== $p && is_readable( $p ) && false !== strpos( str_replace( '\\', '/', $p ), 'bin/wpmcp-proxy.cjs' ) ? 'PASS' : 'FAIL' ) . " local_proxy_path points at the real helper\n";
+$loc = json_decode( WPMCP_Desktop::config_snippet( 'https://bespoke.local', 'ad', '', 'C:\\Users\\me\\Local Sites\\b\\wpmcp-proxy.cjs' ), true );
+$e   = $loc['mcpServers']['wp-mcp-tools-bespoke-local'];
+echo ( 'C:\\Users\\me\\Local Sites\\b\\wpmcp-proxy.cjs' === $e['args'][0] && '1' === $e['env']['WPMCP_INSECURE_TLS'] ? 'PASS' : 'FAIL' ) . " local snippet: real path + insecure TLS flag\n";
+$rem = json_decode( WPMCP_Desktop::config_snippet( 'https://example.com', 'ad', '' ), true );
+// The test site runs with WP_ENVIRONMENT_TYPE=local, which makes every host count as local: only the placeholder is checked.
+echo ( false !== strpos( $rem['mcpServers']['wp-mcp-tools-example-com']['args'][0], 'path' ) ? 'PASS' : 'FAIL' ) . " remote snippet: placeholder path when none is given\n";
+echo ( WPMCP_Desktop::is_windows_path( 'C:\\a\\b' ) && WPMCP_Desktop::is_windows_path( 'D:/a' ) && ! WPMCP_Desktop::is_windows_path( '/var/www/x' ) ? 'PASS' : 'FAIL' ) . " is_windows_path\n";
+PHP
+WPDIR="$WP" PORT="$PORT" php "$WORK/desk2.php" | tee "$WORK/desk2.out"
+if grep -q '^FAIL' "$WORK/desk2.out"; then STATUS=1; fi
