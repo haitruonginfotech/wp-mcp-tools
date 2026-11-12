@@ -66,6 +66,21 @@ class WPMCP_Desktop {
 		return (string) apply_filters( 'wpmcp_local_ca_cert', $cert, $site_url );
 	}
 
+	/**
+	 * Environment for Node based clients (npx mcp-remote ...) so they accept the self-signed certificate of a local
+	 * HTTPS site. Local's own CA file when found, otherwise TLS verification is switched off for that process only.
+	 * Empty for http:// and for public sites.
+	 *
+	 * @return array<string,string>
+	 */
+	public static function node_tls_env( string $url ): array {
+		if ( 0 !== strpos( $url, 'https://' ) || ! self::is_local_site( $url ) ) {
+			return array();
+		}
+		$ca = self::local_ca_cert( $url );
+		return '' !== $ca ? array( 'NODE_EXTRA_CA_CERTS' => $ca ) : array( 'NODE_TLS_REJECT_UNAUTHORIZED' => '0' );
+	}
+
 	/** True when a path is a Windows path (so Claude Desktop on Windows can use it as is). */
 	public static function is_windows_path( string $path ): bool {
 		return (bool) preg_match( '#^([A-Za-z]:[\\\\/]|\\\\\\\\)#', $path );

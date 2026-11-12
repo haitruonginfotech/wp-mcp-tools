@@ -27,7 +27,7 @@ names = sorted(z.namelist())
 m = json.loads(z.read('manifest.json'))
 ok = names == ['manifest.json', 'server/index.js'] and z.read('server/index.js') == open(sys.argv[2], 'rb').read()
 print(('PASS' if ok else 'FAIL') + ' mcpb contains manifest.json + the proxy as server/index.js', names)
-ok2 = m['server']['entry_point'] == 'server/index.js' and 'abcd' not in json.dumps(m) and m['version'] == '0.15.9'
+ok2 = m['server']['entry_point'] == 'server/index.js' and 'abcd' not in json.dumps(m) and m['version'] == '0.15.10'
 print(('PASS' if ok2 else 'FAIL') + ' manifest entry point, version, no secret')
 sys.exit(0 if ok and ok2 else 1)
 PY
@@ -62,3 +62,17 @@ echo ( '' === ( remove_all_filters( 'wpmcp_local_ca_cert' ) ? WPMCP_Desktop::loc
 PHP
 WPDIR="$WP" PORT="$PORT" php "$WORK/desk3.php" | tee "$WORK/desk3.out"
 if grep -q '^FAIL' "$WORK/desk3.out"; then STATUS=1; fi
+
+cat > "$WORK/desk4.php" <<'PHP'
+<?php
+$_SERVER['HTTP_HOST'] = 'localhost:' . getenv( 'PORT' );
+require getenv( 'WPDIR' ) . '/wp-load.php';
+remove_all_filters( 'wpmcp_local_ca_cert' );
+$e = WPMCP_Desktop::node_tls_env( 'https://bespoke.local/wp-json/wp-mcp-tools/mcp' );
+echo ( array( 'NODE_TLS_REJECT_UNAUTHORIZED' => '0' ) === $e ? 'PASS' : 'FAIL' ) . " node_tls_env without CA file: TLS check off\n";
+add_filter( 'wpmcp_local_ca_cert', function () { return 'C:\\ca.crt'; } );
+echo ( array( 'NODE_EXTRA_CA_CERTS' => 'C:\\ca.crt' ) === WPMCP_Desktop::node_tls_env( 'https://bespoke.local/x' ) ? 'PASS' : 'FAIL' ) . " node_tls_env with CA file\n";
+echo ( array() === WPMCP_Desktop::node_tls_env( 'http://bespoke.local/x' ) ? 'PASS' : 'FAIL' ) . " node_tls_env empty for http\n";
+PHP
+WPDIR="$WP" PORT="$PORT" php "$WORK/desk4.php" | tee "$WORK/desk4.out"
+if grep -q '^FAIL' "$WORK/desk4.out"; then STATUS=1; fi

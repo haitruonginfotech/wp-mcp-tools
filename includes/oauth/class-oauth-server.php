@@ -99,6 +99,11 @@ class WPMCP_OAuth_Server {
 		if ( 'wellknown' === $mode ) {
 			return true;
 		}
+		// A local *.local / *.test site is served by its own web server: /.well-known/ is never blocked there, and the
+		// loopback probe below would fail on its self-signed certificate and wrongly pick the path issuer.
+		if ( preg_match( '/\.(local|test)$/', strtolower( (string) wp_parse_url( self::base(), PHP_URL_HOST ) ) ) ) {
+			return true;
+		}
 		$cached = get_transient( 'wpmcp_wk_ok' );
 		if ( false !== $cached ) {
 			return '1' === $cached;

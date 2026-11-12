@@ -158,11 +158,15 @@ class WPMCP_Admin {
 		$local_tip = $public ? '' : '<p class="wpmcp-warn">This URL is not reachable from the internet, so cloud clients (Claude.ai, Claude Desktop connectors, ChatGPT) cannot use it. Use Claude Code, Cursor, VS Code or <strong>npx mcp-remote</strong>, or put the site behind a public HTTPS tunnel and set <em>Server URL</em>.</p>';
 		$auth_hdr  = 'Authorization: Basic ' . $basic;
 
+		$tls_env      = WPMCP_Desktop::node_tls_env( $url );
 		$remote_oauth = array(
 			'mcpServers' => array(
-				$name => array(
-					'command' => 'npx',
-					'args'    => array_merge( array( '-y', 'mcp-remote', $url ), $http_flag ),
+				$name => array_merge(
+					array(
+						'command' => 'npx',
+						'args'    => array_merge( array( '-y', 'mcp-remote', $url ), $http_flag ),
+					),
+					array() !== $tls_env ? array( 'env' => $tls_env ) : array()
 				),
 			),
 		);
@@ -171,7 +175,7 @@ class WPMCP_Admin {
 				$name => array(
 					'command' => 'npx',
 					'args'    => array_merge( array( '-y', 'mcp-remote', $url, '--header', 'Authorization:${WP_AUTH}' ), $http_flag ),
-					'env'     => array( 'WP_AUTH' => 'Basic ' . $basic ),
+					'env'     => array_merge( array( 'WP_AUTH' => 'Basic ' . $basic ), $tls_env ),
 				),
 			),
 		);
@@ -207,7 +211,7 @@ class WPMCP_Admin {
 					),
 					array(
 						'title' => 'Option B: Local bridge (works for local sites)',
-						'text'  => '<p><em>Settings → Developer → Edit Config</em>, add this server to <code>claude_desktop_config.json</code> and restart Claude. A browser window opens to sign in and approve. Requires Node.js.</p>',
+						'text'  => '<p><em>Settings → Developer → Edit Config</em>, add this server to <code>claude_desktop_config.json</code> and restart Claude. A browser window opens to sign in and approve. Requires Node.js.' . ( array() !== $tls_env ? ' The <code>env</code> block lets Node accept this local site\'s self-signed HTTPS certificate.' : '' ) . '</p>',
 						'label' => 'claude_desktop_config.json',
 						'code'  => self::json( $remote_oauth ),
 					),
