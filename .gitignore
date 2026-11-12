@@ -4,3 +4,4 @@ Thumbs.db
 
 # third-party reference plugins kept in AI/ for study only
 /AI/elementor-mcp-*/
+release-private.pem

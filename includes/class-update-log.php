@@ -158,6 +158,7 @@ final class WPMCP_Update_Log {
 		return array(
 			'installed_version'   => WPMCP_VERSION,
 			'folder'              => dirname( $basename ),
+			'signed_updates'      => WPMCP_Updater::signing_required() ? 'required' : ( '' !== WPMCP_Updater::public_key() ? 'overridden' : 'not_configured' ),
 			'update_channel'      => defined( 'WPMCP_DISABLE_UPDATER' ) && WPMCP_DISABLE_UPDATER ? 'disabled' : 'github:' . WPMCP_Updater::repo(),
 			'latest_release'      => $latest ? array(
 				'version'   => $latest['version'],

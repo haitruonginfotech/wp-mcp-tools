@@ -104,11 +104,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           V: ${{ steps.bump.outputs.version }}
+          WPMCP_SIGNING_KEY: ${{ secrets.WPMCP_SIGNING_KEY }}
         run: |
           git archive --format=zip --prefix=wp-mcp-tools/ -o "wp-mcp-tools-$V.zip" "v$V"
+          ASSETS="wp-mcp-tools-$V.zip"
+          if [ -f includes/release-public.pem ]; then
+            [ -n "$WPMCP_SIGNING_KEY" ] || { echo "::error::includes/release-public.pem exists but secret WPMCP_SIGNING_KEY is empty: an unsigned release would be refused by every site"; exit 1; }
+            bash bin/sign-release.sh "wp-mcp-tools-$V.zip"
+            ASSETS="$ASSETS wp-mcp-tools-$V.zip.sig"
+          fi
           printf 'Automated release.\n\n- Bundled WordPress MCP Adapter: %s → %s\n- E2E smoke test: passed\n- MCP Adapter changelog: https://github.com/WordPress/mcp-adapter/blob/trunk/CHANGELOG.md\n' \
             "${{ steps.ver.outputs.current }}" "${{ steps.ver.outputs.latest }}" > notes.md
-          gh release create "v$V" "wp-mcp-tools-$V.zip" --title "v$V" --notes-file notes.md
+          gh release create "v$V" $ASSETS --title "v$V" --notes-file notes.md
           # A pull request left over from an earlier failed run is now obsolete.
           git push origin --delete update/mcp-adapter 2>/dev/null || true
 

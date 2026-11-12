@@ -13,6 +13,12 @@
  * Repository override (e.g. a fork): define( 'WPMCP_UPDATE_REPO', 'owner/repo' ); in wp-config.php.
  * Disable completely: define( 'WPMCP_DISABLE_UPDATER', true );
  *
+ * Signed releases (0.16.0): when the plugin bundles a release public key (includes/release-public.pem) every
+ * downloaded zip must come with a detached RSA-SHA256 signature (asset wp-mcp-tools-X.Y.Z.zip.sig, base64) that
+ * verifies against it, or WordPress refuses to install it. A hijacked GitHub account or a tampered download then
+ * cannot push code to the sites. Without a bundled key nothing is checked (older behaviour).
+ * Emergency override: define( 'WPMCP_ALLOW_UNSIGNED_UPDATES', true ); in wp-config.php.
+ *
  * @package WPMCPTools
  */
 
@@ -31,6 +37,7 @@ final class WPMCP_Updater {
 		}
 		add_filter( 'update_plugins_github.com', array( __CLASS__, 'check' ), 10, 4 );
 		add_filter( 'plugins_api', array( __CLASS__, 'details' ), 10, 3 );
+		add_filter( 'upgrader_pre_download', array( __CLASS__, 'verified_download' ), 10, 4 );
 		add_filter( 'upgrader_source_selection', array( __CLASS__, 'fix_folder' ), 10, 4 );
 		add_action( 'upgrader_process_complete', array( __CLASS__, 'flush' ), 10, 0 );
 		add_action( 'load-plugins.php', array( __CLASS__, 'ensure_checked' ), 1 );
@@ -91,6 +98,75 @@ final class WPMCP_Updater {
 	}
 
 	/**
+	 * Public key that release signatures are checked against: the bundled file, or the `wpmcp_release_public_key`
+	 * filter (tests, forks). Empty string = signature checking is not configured.
+	 */
+	public static function public_key(): string {
+		$pem  = '';
+		$file = WPMCP_DIR . 'includes/release-public.pem';
+		if ( is_readable( $file ) ) {
+			$pem = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		}
+		$pem = (string) apply_filters( 'wpmcp_release_public_key', $pem );
+		return false !== strpos( $pem, 'BEGIN PUBLIC KEY' ) ? $pem : '';
+	}
+
+	/** True when downloads must be signed. */
+	public static function signing_required(): bool {
+		return '' !== self::public_key() && ! ( defined( 'WPMCP_ALLOW_UNSIGNED_UPDATES' ) && WPMCP_ALLOW_UNSIGNED_UPDATES );
+	}
+
+	/**
+	 * Does the detached signature (base64 text) match the file? RSA-SHA256.
+	 */
+	public static function verify_file( string $path, string $signature_b64, string $pem ): bool {
+		if ( ! function_exists( 'openssl_verify' ) || ! is_readable( $path ) ) {
+			return false;
+		}
+		$sig = base64_decode( preg_replace( '/\s+/', '', $signature_b64 ), true );
+		$key = openssl_pkey_get_public( $pem );
+		if ( false === $sig || '' === $sig || ! $key ) {
+			return false;
+		}
+		$data = file_get_contents( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		return false !== $data && 1 === openssl_verify( $data, $sig, $key, OPENSSL_ALGO_SHA256 );
+	}
+
+	/**
+	 * Filter: upgrader_pre_download. For our own release zip, download it, fetch its signature and verify
+	 * before WordPress unpacks anything. Returns the verified temp file, or a WP_Error that stops the install.
+	 *
+	 * @param bool|string|WP_Error $reply   Earlier decision.
+	 * @param string               $package Package URL.
+	 */
+	public static function verified_download( $reply, $package, $upgrader = null, $hook_extra = array() ) {
+		unset( $upgrader, $hook_extra );
+		if ( false !== $reply || ! is_string( $package ) || 0 !== strpos( $package, 'https://github.com/' . self::repo() . '/releases/download/' ) ) {
+			return $reply;
+		}
+		if ( ! self::signing_required() ) {
+			return $reply;
+		}
+		$sig_url = $package . '.sig';
+		$sig_res = wp_remote_get( $sig_url, array( 'timeout' => 15, 'headers' => array( 'User-Agent' => 'wp-mcp-tools/' . WPMCP_VERSION ) ) );
+		if ( is_wp_error( $sig_res ) || 200 !== (int) wp_remote_retrieve_response_code( $sig_res ) ) {
+			return new WP_Error( 'wpmcp_unsigned', 'WP MCP Tools: this release has no signature file (' . basename( $sig_url ) . '), so it was not installed. Nothing was changed.' );
+		}
+		if ( ! function_exists( 'download_url' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+		$tmp = download_url( $package );
+		if ( is_wp_error( $tmp ) ) {
+			return $tmp;
+		}
+		if ( ! self::verify_file( $tmp, (string) wp_remote_retrieve_body( $sig_res ), self::public_key() ) ) {
+			wp_delete_file( $tmp );
+			return new WP_Error( 'wpmcp_bad_signature', 'WP MCP Tools: the downloaded update does not match its signature, so it was NOT installed. Nothing was changed.' );
+		}
+		return $tmp;
+	}
+
+	/**
 	 * Latest release as [ version, package, url, body, published ] or null.
 	 */
 	public static function latest( bool $force = false ): ?array {
@@ -130,12 +206,14 @@ final class WPMCP_Updater {
 		if ( ! preg_match( '/^\d+\.\d+\.\d+$/', $version ) ) {
 			return null;
 		}
-		$package = '';
+		$package   = '';
+		$signature = '';
 		foreach ( (array) ( $data['assets'] ?? array() ) as $asset ) {
 			$name = (string) ( $asset['name'] ?? '' );
-			if ( preg_match( '/^wp-mcp-tools-[\d.]+\.zip$/', $name ) && ! empty( $asset['browser_download_url'] ) ) {
+			if ( '' === $package && preg_match( '/^wp-mcp-tools-[\d.]+\.zip$/', $name ) && ! empty( $asset['browser_download_url'] ) ) {
 				$package = (string) $asset['browser_download_url'];
-				break;
+			} elseif ( '' === $signature && preg_match( '/^wp-mcp-tools-[\d.]+\.zip\.sig$/', $name ) && ! empty( $asset['browser_download_url'] ) ) {
+				$signature = (string) $asset['browser_download_url'];
 			}
 		}
 		if ( '' === $package || 0 !== strpos( $package, 'https://github.com/' . self::repo() . '/releases/download/' ) ) {
@@ -144,6 +222,7 @@ final class WPMCP_Updater {
 		return array(
 			'version'   => $version,
 			'package'   => $package,
+			'signature' => 0 === strpos( $signature, 'https://github.com/' . self::repo() . '/releases/download/' ) ? $signature : '',
 			'url'       => esc_url_raw( (string) ( $data['html_url'] ?? 'https://github.com/' . self::repo() ) ),
 			'body'      => (string) ( $data['body'] ?? '' ),
 			'published' => (string) ( $data['published_at'] ?? '' ),
