@@ -25,6 +25,7 @@ class WPMCP_Plugin {
 		'WPMCP_Elementor',
 		'WPMCP_Activity',
 		'WPMCP_Seo',
+		'WPMCP_Seo_Fields',
 		'WPMCP_Integrity',
 		'WPMCP_Watch',
 	);

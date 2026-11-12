@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       WP MCP Tools
  * Description:       Registers WordPress abilities (posts, pages, CPT, taxonomies, SCF/ACF fields, media, menus, options, theme files) and exposes them as a dedicated MCP server through the bundled WordPress MCP Adapter, with OAuth 2.1 or Application Password sign-in.
- * Version:           0.16.0
+ * Version:           0.17.0
  * Requires at least: 6.9
  * Requires PHP:      7.4
  * Author:            Hai Truong IT
@@ -15,7 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WPMCP_VERSION', '0.16.0' );
+define( 'WPMCP_VERSION', '0.17.0' );
 define( 'WPMCP_FILE', __FILE__ );
 define( 'WPMCP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPMCP_URL', plugin_dir_url( __FILE__ ) );
@@ -60,6 +60,7 @@ require_once WPMCP_DIR . 'includes/class-activity.php';
 require_once WPMCP_DIR . 'includes/class-undo.php';
 require_once WPMCP_DIR . 'includes/class-unlock.php';
 require_once WPMCP_DIR . 'includes/abilities/class-seo.php';
+require_once WPMCP_DIR . 'includes/abilities/class-seo-fields.php';
 require_once WPMCP_DIR . 'includes/abilities/class-integrity.php';
 require_once WPMCP_DIR . 'includes/class-watch.php';
 require_once WPMCP_DIR . 'includes/class-hit-log.php';

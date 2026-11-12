@@ -56,6 +56,18 @@ final class WPMCP_Undo {
 			}
 			return array( 'type' => 'options', 'old' => $old );
 		}
+		if ( 'update-seo' === $slug ) {
+			$post   = get_post( absint( $input['id'] ?? 0 ) );
+			$plugin = WPMCP_Seo::seo_plugin();
+			if ( ! $post || ! in_array( $plugin, array( 'yoast', 'rank-math', 'seopress' ), true ) ) {
+				return null;
+			}
+			$old = array();
+			foreach ( WPMCP_Seo_Fields::meta_keys( $plugin, WPMCP_Seo_Fields::requested( $input ) ) as $key ) {
+				$old[ $key ] = array( 'absent' => ! metadata_exists( 'post', $post->ID, $key ), 'value' => get_post_meta( $post->ID, $key, true ) );
+			}
+			return $old ? array( 'type' => 'postmeta', 'id' => $post->ID, 'old' => $old ) : null;
+		}
 		if ( 'delete-post' === $slug && empty( $input['force'] ) ) {
 			$post = get_post( absint( $input['id'] ?? 0 ) );
 			return $post ? array( 'type' => 'trashed', 'id' => $post->ID, 'status' => $post->post_status ) : null;
@@ -89,6 +101,12 @@ final class WPMCP_Undo {
 				$snap['after'] = array();
 				foreach ( $changed as $name => $o ) {
 					$snap['after'][ $name ] = get_option( $name, null );
+				}
+				return $snap;
+			case 'postmeta':
+				$snap['after'] = array();
+				foreach ( $snap['old'] as $key => $o ) {
+					$snap['after'][ $key ] = get_post_meta( $snap['id'], $key, true );
 				}
 				return $snap;
 			case 'trashed':
@@ -170,6 +188,20 @@ final class WPMCP_Undo {
 						delete_option( $name );
 					} else {
 						update_option( $name, $o['value'] );
+					}
+				}
+				return true;
+			case 'postmeta':
+				foreach ( $snap['after'] as $key => $val ) {
+					if ( get_post_meta( $snap['id'], $key, true ) !== $val ) {
+						return $changed;
+					}
+				}
+				foreach ( $snap['old'] as $key => $o ) {
+					if ( $o['absent'] ) {
+						delete_post_meta( $snap['id'], $key );
+					} else {
+						update_post_meta( $snap['id'], $key, wp_slash( $o['value'] ) );
 					}
 				}
 				return true;

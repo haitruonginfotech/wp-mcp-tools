@@ -31,6 +31,8 @@ class WPMCP_Settings {
 				// Read-only audits (v0.15.0).
 				'seo'         => 1,
 				'security'    => 1,
+				// Typed SEO field writes (v0.17.0): opt-in.
+				'seo-edit'    => 0,
 				// Installing / updating / deleting plugins and themes: opt-in.
 				'manage'      => 0,
 				// Plugin source files: read and write are both opt-in; writes also need a ticked plugin below.

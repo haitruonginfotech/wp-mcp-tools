@@ -29,7 +29,7 @@ class WPMCP_Access {
 
 	/** Tools drafts-only may call (besides read-only ones). Post targets are checked in check(). */
 	const DRAFT_TOOLS = array(
-		'create-post', 'update-post', 'replace-in-post', 'duplicate-post', 'update-post-meta', 'set-post-terms',
+		'create-post', 'update-post', 'replace-in-post', 'duplicate-post', 'update-post-meta', 'set-post-terms', 'update-seo',
 		'restore-revision', 'update-fields', 'create-term', 'upload-media', 'create-upload-session', 'upload-media-chunk',
 	);
 
@@ -164,7 +164,7 @@ class WPMCP_Access {
 	 * Unknown or non-post targets count as live ('publish'), so they are refused.
 	 */
 	private static function target_post( string $slug, array $input ): ?string {
-		if ( in_array( $slug, array( 'update-post', 'replace-in-post', 'update-post-meta', 'set-post-terms' ), true ) ) {
+		if ( in_array( $slug, array( 'update-post', 'replace-in-post', 'update-post-meta', 'set-post-terms', 'update-seo' ), true ) ) {
 			$post = get_post( absint( $input['id'] ?? 0 ) );
 			return $post ? $post->post_status : 'publish';
 		}
