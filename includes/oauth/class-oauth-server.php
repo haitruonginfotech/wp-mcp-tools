@@ -29,6 +29,9 @@ class WPMCP_OAuth_Server {
 
 	public static function init(): void {
 		add_action( 'init', array( __CLASS__, 'route' ), 1 );
+		// Suffixed well-known URLs that name OUR issuer or OUR MCP route are ours by definition. Answer them before a theme
+		// or plugin that claims every /.well-known/oauth-* URL (init priority 0) can shadow them.
+		add_action( 'init', array( __CLASS__, 'route_own_wellknown' ), -10 );
 		add_action( 'wpmcp_oauth_purge', array( 'WPMCP_OAuth_Store', 'purge_expired' ) );
 		add_action(
 			'init',
@@ -99,9 +102,8 @@ class WPMCP_OAuth_Server {
 		if ( 'wellknown' === $mode ) {
 			return true;
 		}
-		// A local *.local / *.test site is served by its own web server: /.well-known/ is never blocked there, and the
-		// loopback probe below would fail on its self-signed certificate and wrongly pick the path issuer.
-		if ( preg_match( '/\.(local|test)$/', strtolower( (string) wp_parse_url( self::base(), PHP_URL_HOST ) ) ) ) {
+		// A probe request sent by this very check: answer in the plain /.well-known/ form and do not probe again.
+		if ( isset( $_SERVER['HTTP_X_WPMCP_PROBE'] ) ) {
 			return true;
 		}
 		$cached = get_transient( 'wpmcp_wk_ok' );
@@ -111,8 +113,17 @@ class WPMCP_OAuth_Server {
 		$host = wp_parse_url( self::base() );
 		$root = $host['scheme'] . '://' . $host['host'] . ( isset( $host['port'] ) ? ':' . $host['port'] : '' );
 		$path = (string) wp_parse_url( self::mcp_url(), PHP_URL_PATH );
-		$res  = WPMCP_Diagnose::probe( $root . '/.well-known/oauth-protected-resource' . $path );
+		$mark = array( 'X-WPMCP-Probe' => '1' );
+		$res  = WPMCP_Diagnose::probe( $root . '/.well-known/oauth-protected-resource' . $path, 'GET', null, $mark );
 		$ok   = 200 === $res['code'] && is_array( $res['json'] ) && isset( $res['json']['resource'] ) && self::mcp_url() === $res['json']['resource'];
+		if ( $ok ) {
+			// Clients then read the plain /.well-known/oauth-authorization-server: it must be ours too (a theme or another
+			// plugin may answer it with its own issuer).
+			$as = WPMCP_Diagnose::probe( $root . '/.well-known/oauth-authorization-server', 'GET', null, $mark );
+			$ok = 200 === $as['code'] && is_array( $as['json'] )
+				&& untrailingslashit( (string) ( $as['json']['issuer'] ?? '' ) ) === self::base()
+				&& self::endpoint( 'authorize' ) === (string) ( $as['json']['authorization_endpoint'] ?? '' );
+		}
 		set_transient( 'wpmcp_wk_ok', $ok ? '1' : '0', HOUR_IN_SECONDS );
 		return $ok;
 	}
@@ -173,6 +184,32 @@ class WPMCP_OAuth_Server {
 		}
 
 		return $endpoint;
+	}
+
+	/**
+	 * True for /.well-known/oauth-*[/suffix] URLs whose suffix names this plugin's issuer path or MCP route.
+	 * Plain (unsuffixed) URLs stay with whoever answers them.
+	 */
+	public static function is_own_wellknown_request(): bool {
+		$path = (string) wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$home = untrailingslashit( (string) wp_parse_url( home_url(), PHP_URL_PATH ) );
+		if ( '' !== $home && 0 === strpos( $path, $home . '/' ) ) {
+			$path = substr( $path, strlen( $home ) );
+		}
+		if ( ! preg_match( '~^/\.well-known/(oauth-authorization-server|openid-configuration|oauth-protected-resource)(/.+)$~', $path, $m ) ) {
+			return false;
+		}
+		$suffix = untrailingslashit( $m[2] );
+		if ( 'oauth-protected-resource' === $m[1] ) {
+			return $suffix === untrailingslashit( (string) wp_parse_url( self::mcp_url(), PHP_URL_PATH ) );
+		}
+		return '/wpmcp-oauth' === $suffix;
+	}
+
+	public static function route_own_wellknown(): void {
+		if ( self::is_own_wellknown_request() ) {
+			self::route();
+		}
 	}
 
 	public static function route(): void {

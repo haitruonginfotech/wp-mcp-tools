@@ -39,7 +39,7 @@ class WPMCP_Oauth_Conflicts {
 						$row['detail'] .= ' Likely source: ' . implode( ', ', $owners ) . '.';
 						$row['fix']     = sprintf( 'Deactivate %s, remove this connector in your AI client and add it again. Two plugins cannot both own the sign-in documents of one site.', implode( ' or ', $owners ) );
 					} else {
-						$row['fix'] = 'No plugin was identified. Look for a static file at /.well-known/' . self::MARKER . ' or a rewrite rule in the web server or a caching layer, and remove it.';
+						$row['fix'] = 'No plugin was identified. Check the active theme (functions.php and inc/ files that mention oauth-authorization-server), then look for a static file at /.well-known/' . self::MARKER . ' or a rewrite rule in the web server or a caching layer, and remove it.';
 					}
 				}
 				$rows[] = $row;

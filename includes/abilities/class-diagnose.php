@@ -61,13 +61,13 @@ class WPMCP_Diagnose {
 	 * @param string $method GET|POST.
 	 * @return array{code:int, headers:array, body:string, json:mixed, error:string}
 	 */
-	public static function probe( string $url, string $method = 'GET', ?string $body = null ): array {
+	public static function probe( string $url, string $method = 'GET', ?string $body = null, array $extra_headers = array() ): array {
 		$args = array(
 			'method'      => $method,
 			'timeout'     => 15,
 			'sslverify'   => (bool) apply_filters( 'https_local_ssl_verify', false ), // Same default as core loopback requests.
 			'redirection' => 0,
-			'headers'     => array( 'Accept' => 'application/json', 'Cache-Control' => 'no-cache' ),
+			'headers'     => array_merge( array( 'Accept' => 'application/json', 'Cache-Control' => 'no-cache' ), $extra_headers ),
 		);
 		if ( null !== $body ) {
 			$args['body']                    = $body;
