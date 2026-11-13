@@ -31,6 +31,8 @@ class WPMCP_Access {
 	const DRAFT_TOOLS = array(
 		'create-post', 'update-post', 'replace-in-post', 'duplicate-post', 'update-post-meta', 'set-post-terms', 'update-seo',
 		'restore-revision', 'update-fields', 'create-term', 'upload-media', 'create-upload-session', 'upload-media-chunk',
+		'elementor-add-element', 'elementor-update-element', 'elementor-move-element', 'elementor-remove-element',
+		'elementor-duplicate-element', 'elementor-replace-text', 'elementor-batch', 'elementor-build-page',
 	);
 
 	/** Post statuses that are not public. */
@@ -164,7 +166,7 @@ class WPMCP_Access {
 	 * Unknown or non-post targets count as live ('publish'), so they are refused.
 	 */
 	private static function target_post( string $slug, array $input ): ?string {
-		if ( in_array( $slug, array( 'update-post', 'replace-in-post', 'update-post-meta', 'set-post-terms', 'update-seo' ), true ) ) {
+		if ( in_array( $slug, array( 'update-post', 'replace-in-post', 'update-post-meta', 'set-post-terms', 'update-seo', 'elementor-add-element', 'elementor-update-element', 'elementor-move-element', 'elementor-remove-element', 'elementor-duplicate-element', 'elementor-replace-text', 'elementor-batch', 'elementor-build-page' ), true ) ) {
 			$post = get_post( absint( $input['id'] ?? 0 ) );
 			return $post ? $post->post_status : 'publish';
 		}

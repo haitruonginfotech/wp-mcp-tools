@@ -888,6 +888,7 @@ class WPMCP_Admin {
 			'theme'       => 'dashicons-admin-appearance',
 			'theme-write' => 'dashicons-edit-page',
 			'elementor'   => 'dashicons-layout',
+			'elementor-edit' => 'dashicons-layout',
 			'manage'      => 'dashicons-admin-plugins',
 			'plugin-read' => 'dashicons-media-code',
 			'plugin-write' => 'dashicons-edit',

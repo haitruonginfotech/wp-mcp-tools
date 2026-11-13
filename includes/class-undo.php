@@ -4,7 +4,8 @@
  *
  * Supported: update-post and replace-in-post (previous title, content, excerpt, status, slug, parent, order),
  * update-options (previous values), create-post (moves the new post to the trash), delete-post without force
- * (takes the post out of the trash). Everything else is logged but cannot be undone from here.
+ * (takes the post out of the trash), and the Elementor edit tools (previous page data up to 300 KB; a page made by
+ * elementor-build-page goes to the trash). Everything else is logged but cannot be undone from here.
  *
  * Safety: an undo is refused when the thing changed again after the AI's change (so a later human edit is
  * never overwritten), and only administrators can press it. Snapshots hold the previous values of the changed
@@ -74,6 +75,20 @@ final class WPMCP_Undo {
 		}
 		if ( 'create-post' === $slug ) {
 			return array( 'type' => 'created' );
+		}
+		if ( class_exists( 'WPMCP_Elementor_Edit' ) && in_array( $slug, WPMCP_Elementor_Edit::WRITE_TOOLS, true ) && empty( $input['dry_run'] ) ) {
+			if ( 'elementor-build-page' === $slug && empty( $input['id'] ) ) {
+				return array( 'type' => 'created' );
+			}
+			$post = get_post( absint( $input['id'] ?? 0 ) );
+			if ( ! $post ) {
+				return null;
+			}
+			$cur = get_post_meta( $post->ID, WPMCP_Elementor_Edit::META, true );
+			if ( ! is_string( $cur ) || strlen( $cur ) > self::MAX_LEN ) {
+				return null;
+			}
+			return array( 'type' => 'postmeta', 'id' => $post->ID, 'old' => array( WPMCP_Elementor_Edit::META => array( 'absent' => ! metadata_exists( 'post', $post->ID, WPMCP_Elementor_Edit::META ), 'value' => $cur ) ) );
 		}
 		return null;
 	}
@@ -203,6 +218,9 @@ final class WPMCP_Undo {
 					} else {
 						update_post_meta( $snap['id'], $key, wp_slash( $o['value'] ) );
 					}
+				}
+				if ( isset( $snap['old']['_elementor_data'] ) && class_exists( 'WPMCP_Elementor_Edit' ) ) {
+					WPMCP_Elementor_Edit::after_restore( (int) $snap['id'] ); // Rebuild Elementor's CSS for the restored page.
 				}
 				return true;
 			case 'created':

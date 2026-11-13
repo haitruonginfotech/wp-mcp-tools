@@ -28,6 +28,8 @@ class WPMCP_Settings {
 				'theme'       => 1,
 				'theme-write' => 1,
 				'elementor'   => 1,
+				// Fast tree editing of Elementor pages, classic and atomic (v0.18.0).
+				'elementor-edit' => 1,
 				// Read-only audits (v0.15.0).
 				'seo'         => 1,
 				'security'    => 1,

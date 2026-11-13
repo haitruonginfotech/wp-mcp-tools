@@ -47,6 +47,7 @@ Each group is a switch under *MCP Tools → Tools*. Groups marked **off** stay d
 | seo | audit-seo, audit-geo |
 | security | check-integrity, scan-suspicious, site-health, file-watch-baseline, file-watch-check, list-activity (site group) |
 | elementor (needs Elementor 4.x) | Elementor's own abilities, named `elementor-<name>` |
+| elementor-edit (needs Elementor) | elementor-get-tree, elementor-get-element, elementor-find, elementor-add-element, elementor-update-element, elementor-move-element, elementor-remove-element, elementor-duplicate-element, elementor-replace-text, elementor-batch, elementor-build-page (classic V3 and atomic V4) |
 
 Extend with your own tools:
 
@@ -129,7 +130,26 @@ Activate, deactivate, install (wordpress.org slug only, no arbitrary zip URLs), 
 
 `includes/integrations/class-elementor.php` bridges **Elementor's built-in MCP module** (Elementor 4.3+; Pro adds site parts). It does not re-implement builder logic: Elementor's abilities are registered with Elementor's own code and added to the WP MCP Tools server, so one connection covers WordPress, SCF/ACF and Elementor.
 
-**Limitation:** Elementor's builder tools are gated to the **Atomic Editor (V4)**. Classic (V3) widgets such as Form, Image and Heading are mostly out of reach, so on sites built with V3 widgets some changes still have to be made in the Elementor editor. WP MCP Tools does not add its own V3 editing tools.
+**Limitation:** Elementor's own builder tools are gated to the **Atomic Editor (V4)**. For classic (V3) widgets and for fast bulk work, use the `elementor-edit` group below.
+
+### Fast editing, classic and atomic (`elementor-edit`, v0.18.0)
+
+`includes/abilities/class-elementor-edit.php` edits a page's element tree (`_elementor_data`) directly and treats every element kind alike: classic `section` / `column` / flex `container` with any widget (heading, button, image, form ...), and atomic `e-flexbox` / `e-div-block` with `e-*` widgets. Saving goes through Elementor's own document, so revisions, CSS regeneration and atomic validation still apply; a rejected change saves nothing.
+
+The speed comes from doing a lot per call: `elementor-batch` runs many operations in one load and one save (all or nothing), and `elementor-build-page` creates a whole page, or replaces / appends to one, from a nested tree. An id written `@name` refers to an element created earlier in the same batch (`"ref":"name"`), so a layout can be built and filled without a round trip.
+
+| Tool | Does |
+|---|---|
+| `elementor-get-tree` | Outline of a page (ids, types, text preview, nesting) and a `hash` for safe writes |
+| `elementor-get-element` / `elementor-find` | One element in full / find by widget type, element type or text |
+| `elementor-add-element` / `-update-element` / `-move-element` / `-remove-element` / `-duplicate-element` | Single edits |
+| `elementor-replace-text` | Find and replace (plain or regex) in all text settings, e.g. a phone number or a domain |
+| `elementor-batch` | A list of operations in one call |
+| `elementor-build-page` | Create (draft by default) or rebuild a page from a tree |
+
+Elements use a short form: `{"widget":"heading","settings":{"title":"Hi"}}` for a classic widget, `{"widget":"e-heading","settings":{"title":"Hi","tag":"h1"}}` for an atomic one (plain values are wrapped into Elementor's typed props for e-heading, e-paragraph, e-button, e-image, e-youtube, `link`, `css_id`), `{"type":"container","children":[...]}` for layout. A full Elementor element (`elType`, `widgetType`, `settings`, `elements`) is accepted as is, and so are already-typed (`$$type`) values. Placement is checked before saving (for example a widget cannot sit at the page root or directly in a section).
+
+Safety: `expected_hash` (from `elementor-get-tree`) refuses a write if the page changed since you read it; `dry_run` checks without saving; data that cannot be read is never overwritten. Access levels apply (drafts-only may change drafts only), the activity log records every write, and Undo restores the previous page data (pages up to 300 KB; a page created by `elementor-build-page` goes to the trash). Switch the group off under *Tools → Elementor edit (V3 + V4)*. Unit tests: `php tests/elementor-tree.php` and `php tests/elementor-edit-smoke.php`.
 
 Switch it off under *Tools → Elementor*. If Elementor is not active, the group shows "Unavailable".
 
@@ -239,6 +259,7 @@ If the site sets `DISALLOW_FILE_EDIT` (in `wp-config.php` or a security plugin s
 | 0.15.11 | 2026-11-12 | Sign-in discovery next to another OAuth layer (for example a theme that answers every `/.well-known/oauth-*` URL): the suffixed URLs that name this plugin (`/.well-known/oauth-authorization-server/wpmcp-oauth`, `/.well-known/openid-configuration/wpmcp-oauth`, `/.well-known/oauth-protected-resource/wp-json/wp-mcp-tools/mcp`) are now answered before such code runs, so `npx mcp-remote` and other strict clients no longer get the other layer's issuer. The `/.well-known/` check now also requires the plain authorization-server document to be ours, and its probe requests no longer trigger probes of their own. Reverts the 0.15.10 rule that forced `/.well-known/` discovery on `*.local` sites. The conflict hint now mentions the active theme. |
 | 0.15.12 | 2026-11-12 | Diagnose names the source of a sign-in conflict: besides plugins and mu-plugins it now finds a **theme** that answers `/.well-known/oauth-authorization-server`, and shows the file (for example `themes/bespoke-main/inc/mcp-oauth.php`). New informational row `oauth_root_shadowed` when WP MCP Tools works through its own issuer path because another component owns the standard address. |
 | 0.16.0 | 2026-11-12 | **Signed updates.** Every release zip can carry a detached RSA-SHA256 signature (`wp-mcp-tools-X.Y.Z.zip.sig`). When the plugin bundles a public key (`includes/release-public.pem`), WordPress downloads the zip, checks the signature and refuses to install an unsigned or tampered file (clear error, nothing changed). New `bin/gen-signing-key.sh` (one-time key pair) and `bin/sign-release.sh`; both release workflows sign when the secret `WPMCP_SIGNING_KEY` is set and stop if the key file exists but the secret is missing. `get-update-status` shows `signed_updates`. Emergency override: `define( 'WPMCP_ALLOW_UNSIGNED_UPDATES', true );`. No public key bundled = behaves as before. |
+| 0.18.0 | 2026-11-13 | **Fast Elementor editing, classic and atomic.** New group `elementor-edit` with 11 tools (`elementor-get-tree`, `-get-element`, `-find`, `-add-element`, `-update-element`, `-move-element`, `-remove-element`, `-duplicate-element`, `-replace-text`, `-batch`, `-build-page`) that edit the element tree directly: classic section / column / container widgets and atomic e-flexbox / e-div-block / e-* widgets alike, many changes in one call, short element descriptions, `@ref` links inside a batch, `expected_hash` conflict guard, `dry_run`. Saved through Elementor's own document; honours access levels, the activity log and Undo. |
 | 0.17.0 | 2026-11-12 | **Typed SEO tools.** `get-seo` (group SEO, on) and `update-seo` (new group **SEO fields (write)**, off by default) read and set title, description, focus keyword, canonical, noindex, nofollow and social title/description/image of a post under common names, translated to the active plugin: Yoast SEO, Rank Math, SEOPress (post meta) or All in One SEO (its post model; written through the plugin's own class, not yet tested against the real plugin). Honours access levels (drafts-only may change drafts only), the activity log and Undo (Yoast, Rank Math, SEOPress). |
 | 0.14.0 | 2026-11-06 | Temporary unlock of `DISALLOW_FILE_EDIT` for MCP file tools (1/4/24 hours), with a red admin notice, activity log entries and automatic relock; nothing in the security plugin or wp-config.php is changed. Deactivating clears the unlock; `uninstall.php` removes the add-on options. |
 | 0.13.0 | 2026-11-06 | Undo button in the Activity panel (posts, options, AI-created posts, trashed posts; refused if changed again since). Admin warning when one connection is refused 5+ times in an hour; rate-limit hits are logged once a minute. |

@@ -23,6 +23,7 @@ class WPMCP_Plugin {
 		'WPMCP_Manage',
 		'WPMCP_Diagnose',
 		'WPMCP_Elementor',
+		'WPMCP_Elementor_Edit',
 		'WPMCP_Activity',
 		'WPMCP_Seo',
 		'WPMCP_Seo_Fields',

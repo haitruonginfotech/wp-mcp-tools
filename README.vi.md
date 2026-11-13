@@ -47,6 +47,7 @@ Mỗi nhóm là một công tắc trong *MCP Tools → Tools*. Nhóm ghi **tắt
 | seo | audit-seo, audit-geo |
 | security | check-integrity, scan-suspicious, site-health, file-watch-baseline, file-watch-check |
 | elementor (cần Elementor 4.x) | Các ability của chính Elementor, đặt tên `elementor-<tên>` |
+| elementor-edit (cần Elementor) | elementor-get-tree, elementor-get-element, elementor-find, elementor-add-element, elementor-update-element, elementor-move-element, elementor-remove-element, elementor-duplicate-element, elementor-replace-text, elementor-batch, elementor-build-page (V3 cổ điển và V4 atomic) |
 
 Thêm tool riêng của bạn:
 
@@ -129,7 +130,26 @@ Kích hoạt, tắt, cài (chỉ theo slug wordpress.org, không nhận URL zip 
 
 `includes/integrations/class-elementor.php` là cầu nối tới **module MCP có sẵn của Elementor** (Elementor 4.3+; bản Pro thêm site parts). Plugin không viết lại logic builder: các ability của Elementor được đăng ký bằng chính code của Elementor rồi thêm vào server WP MCP Tools, nên một kết nối dùng được cho cả WordPress, SCF/ACF và Elementor.
 
-**Giới hạn:** công cụ builder của Elementor chỉ chạy với **Atomic Editor (V4)**. Widget cổ điển (V3) như Form, Image, Heading phần lớn nằm ngoài tầm với, nên với site dựng bằng widget V3, một số thay đổi vẫn phải làm tay trong editor của Elementor. WP MCP Tools không có công cụ sửa V3 riêng.
+**Giới hạn:** công cụ builder của chính Elementor chỉ chạy với **Atomic Editor (V4)**. Với widget cổ điển (V3) và các việc hàng loạt cần nhanh, dùng nhóm `elementor-edit` bên dưới.
+
+### Sửa nhanh, cổ điển và atomic (`elementor-edit`, v0.18.0)
+
+`includes/abilities/class-elementor-edit.php` sửa trực tiếp cây element của trang (`_elementor_data`) và đối xử mọi loại element như nhau: `section` / `column` / `container` flex cổ điển với mọi widget (heading, button, image, form ...), và `e-flexbox` / `e-div-block` atomic với widget `e-*`. Việc lưu đi qua document của chính Elementor nên revision, tạo lại CSS và kiểm tra atomic vẫn áp dụng; thay đổi bị từ chối thì không lưu gì.
+
+Tốc độ đến từ việc làm nhiều việc trong một lần gọi: `elementor-batch` chạy nhiều thao tác với một lần đọc và một lần lưu (được cả hoặc không), `elementor-build-page` tạo cả trang, hoặc thay / nối vào trang có sẵn, từ một cây lồng nhau. Id viết dạng `@tên` trỏ tới element vừa tạo trước đó trong cùng batch (`"ref":"tên"`), nên có thể dựng bố cục rồi điền nội dung mà không cần gọi lại nhiều lần.
+
+| Tool | Làm gì |
+|---|---|
+| `elementor-get-tree` | Sơ đồ trang (id, loại, đoạn text xem trước, cấp lồng) và `hash` để ghi an toàn |
+| `elementor-get-element` / `elementor-find` | Một element đầy đủ / tìm theo loại widget, loại element hoặc text |
+| `elementor-add-element` / `-update-element` / `-move-element` / `-remove-element` / `-duplicate-element` | Sửa từng việc |
+| `elementor-replace-text` | Tìm và thay (chữ thường hoặc regex) trong mọi setting dạng text, ví dụ số điện thoại hay tên miền |
+| `elementor-batch` | Một danh sách thao tác trong một lần gọi |
+| `elementor-build-page` | Tạo (mặc định là nháp) hoặc dựng lại trang từ một cây |
+
+Element dùng dạng ngắn: `{"widget":"heading","settings":{"title":"Hi"}}` cho widget cổ điển, `{"widget":"e-heading","settings":{"title":"Hi","tag":"h1"}}` cho atomic (giá trị thường được tự bọc thành prop có kiểu của Elementor với e-heading, e-paragraph, e-button, e-image, e-youtube, `link`, `css_id`), `{"type":"container","children":[...]}` cho bố cục. Element Elementor đầy đủ (`elType`, `widgetType`, `settings`, `elements`) và giá trị đã có kiểu (`$$type`) được nhận nguyên trạng. Vị trí đặt được kiểm tra trước khi lưu (ví dụ widget không thể nằm ở gốc trang hay trực tiếp trong section).
+
+An toàn: `expected_hash` (lấy từ `elementor-get-tree`) từ chối ghi nếu trang đã đổi kể từ lúc đọc; `dry_run` kiểm tra mà không lưu; dữ liệu không đọc được sẽ không bao giờ bị ghi đè. Mức truy cập vẫn áp dụng (drafts-only chỉ sửa bản nháp), nhật ký hoạt động ghi mọi thao tác ghi, và Undo khôi phục dữ liệu trang trước đó (trang tới 300 KB; trang do `elementor-build-page` tạo sẽ được chuyển vào thùng rác). Tắt nhóm trong *Tools → Elementor edit (V3 + V4)*. Test: `php tests/elementor-tree.php` và `php tests/elementor-edit-smoke.php`.
 
 Tắt trong *Tools → Elementor*. Nếu Elementor không hoạt động, nhóm hiện "Unavailable".
 
@@ -239,6 +259,7 @@ Nếu site đặt `DISALLOW_FILE_EDIT` (trong `wp-config.php` hoặc plugin bả
 | 0.15.11 | 2026-11-12 | Khám phá đăng nhập khi có lớp OAuth khác (ví dụ theme trả lời mọi URL `/.well-known/oauth-*`): các URL có hậu tố trỏ tới plugin này (`/.well-known/oauth-authorization-server/wpmcp-oauth`, `/.well-known/openid-configuration/wpmcp-oauth`, `/.well-known/oauth-protected-resource/wp-json/wp-mcp-tools/mcp`) giờ được trả lời trước code đó, nên `npx mcp-remote` và các client chặt chẽ không còn nhận issuer của lớp kia. Phép kiểm tra `/.well-known/` giờ còn yêu cầu tài liệu authorization-server dạng thường cũng phải của plugin, và các request thăm dò không còn tự kích hoạt thăm dò lồng nhau. Bỏ quy tắc 0.15.10 ép dùng `/.well-known/` cho site `*.local`. Gợi ý xung đột giờ nhắc tới theme đang dùng. |
 | 0.15.12 | 2026-11-12 | Diagnose chỉ ra nguồn gây xung đột đăng nhập: ngoài plugin và mu-plugin, giờ còn tìm ra **theme** đang trả lời `/.well-known/oauth-authorization-server` và hiện đúng file (ví dụ `themes/bespoke-main/inc/mcp-oauth.php`). Thêm dòng thông tin `oauth_root_shadowed` khi WP MCP Tools chạy bằng issuer path riêng vì thành phần khác giữ địa chỉ chuẩn. |
 | 0.16.0 | 2026-11-12 | **Cập nhật có chữ ký.** Mỗi file zip phát hành có thể kèm chữ ký RSA-SHA256 tách rời (`wp-mcp-tools-X.Y.Z.zip.sig`). Khi plugin có sẵn khóa công khai (`includes/release-public.pem`), WordPress tải zip, kiểm tra chữ ký và từ chối cài file chưa ký hoặc bị sửa (báo lỗi rõ, không thay đổi gì). Thêm `bin/gen-signing-key.sh` (tạo cặp khóa một lần) và `bin/sign-release.sh`; hai workflow tự ký khi có secret `WPMCP_SIGNING_KEY` và dừng nếu có file khóa công khai mà thiếu secret. `get-update-status` hiện `signed_updates`. Tắt khẩn cấp: `define( 'WPMCP_ALLOW_UNSIGNED_UPDATES', true );`. Chưa có khóa công khai = chạy như cũ. |
+| 0.18.0 | 2026-11-13 | **Sửa Elementor nhanh, cổ điển và atomic.** Nhóm mới `elementor-edit` gồm 11 tool (`elementor-get-tree`, `-get-element`, `-find`, `-add-element`, `-update-element`, `-move-element`, `-remove-element`, `-duplicate-element`, `-replace-text`, `-batch`, `-build-page`) sửa trực tiếp cây element: section / column / container cổ điển với widget và e-flexbox / e-div-block / widget e-* atomic đều như nhau, nhiều thay đổi trong một lần gọi, mô tả element dạng ngắn, liên kết `@ref` trong batch, chặn xung đột bằng `expected_hash`, `dry_run`. Lưu qua document của chính Elementor; tuân theo mức truy cập, nhật ký hoạt động và Undo. |
 | 0.17.0 | 2026-11-12 | **Tool SEO có kiểu.** `get-seo` (nhóm SEO, bật) và `update-seo` (nhóm mới **SEO fields (write)**, tắt mặc định) đọc và đặt title, description, focus keyword, canonical, noindex, nofollow và tiêu đề/mô tả/ảnh mạng xã hội của bài viết theo tên chung, tự chuyển sang plugin đang bật: Yoast SEO, Rank Math, SEOPress (post meta) hoặc All in One SEO (qua model của plugin, chưa thử với plugin thật). Tuân theo mức truy cập (drafts-only chỉ sửa bản nháp), nhật ký hoạt động và Undo (Yoast, Rank Math, SEOPress). |
 | 0.14.0 | 2026-11-06 | Mở khoá tạm thời `DISALLOW_FILE_EDIT` cho tool ghi file MCP (1/4/24 giờ), có thông báo đỏ trong admin, ghi vào Activity và tự khoá lại; không thay đổi gì trong plugin bảo mật hay wp-config.php. Tắt plugin sẽ xoá mở khoá; `uninstall.php` xoá option của các add-on. |
 | 0.13.0 | 2026-11-06 | Nút Undo trong bảng Activity (bài viết, option, bài do AI tạo, bài bị đưa vào thùng rác; bị từ chối nếu đã đổi lại sau đó). Cảnh báo trong admin khi một kết nối bị từ chối từ 5 lần trong một giờ; lần chạm giới hạn tần suất được ghi mỗi phút một lần. |
