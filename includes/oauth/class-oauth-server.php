@@ -163,6 +163,11 @@ class WPMCP_OAuth_Server {
 		if ( isset( $_GET['wpmcp_oauth'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$endpoint = sanitize_key( wp_unslash( $_GET['wpmcp_oauth'] ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		} else {
+			// A /.well-known/oauth-* URL that names a WordPress installed in a sub-folder of this host (/demo) is not ours.
+			$sub = self::subsite_request();
+			if ( null !== $sub ) {
+				return 'resource' === $sub['kind'] ? 'subsite-resource-metadata' : 'subsite-ignore';
+			}
 			$path = (string) wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 			$home = untrailingslashit( (string) wp_parse_url( home_url(), PHP_URL_PATH ) );
 			$rel  = ( '' !== $home && 0 === strpos( $path, $home ) ) ? substr( $path, strlen( $home ) ) : $path;
@@ -206,8 +211,85 @@ class WPMCP_OAuth_Server {
 		return '/wpmcp-oauth' === $suffix;
 	}
 
+	/**
+	 * Sub-folder installs (v0.18.1). A client that connects to https://host/demo/wp-json/wp-mcp-tools/mcp looks for
+	 * its metadata at the ROOT of the host: /.well-known/oauth-protected-resource/demo/wp-json/wp-mcp-tools/mcp, and
+	 * for the issuer https://host/demo/wpmcp-oauth at /.well-known/oauth-authorization-server/demo/wpmcp-oauth.
+	 * Those URLs are answered by the site at the host root, not by /demo. Without this, the root site answered them with
+	 * ITS OWN metadata (wrong resource and issuer) and the client refused the connection.
+	 *
+	 * Returns the request's kind ('resource' = protected-resource metadata, 'server' = authorization-server metadata)
+	 * and the sub-folder prefix when the suffix names another WordPress under this host; null otherwise.
+	 *
+	 * @return array{kind:string,prefix:string}|null
+	 */
+	public static function subsite_request(): ?array {
+		$path = (string) wp_parse_url( isset( $_SERVER['REQUEST_URI'] ) ? wp_unslash( $_SERVER['REQUEST_URI'] ) : '', PHP_URL_PATH ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$home = untrailingslashit( (string) wp_parse_url( home_url(), PHP_URL_PATH ) );
+		if ( '' !== $home && 0 === strpos( $path, $home . '/' ) ) {
+			$path = substr( $path, strlen( $home ) );
+		}
+		if ( ! preg_match( '~^/\.well-known/(oauth-authorization-server|openid-configuration|oauth-protected-resource)(/.+)$~', $path, $m ) ) {
+			return null;
+		}
+		$suffix = untrailingslashit( $m[2] );
+		$seg    = '(?:/[A-Za-z0-9._-]+){1,3}';
+		if ( 'oauth-protected-resource' === $m[1] ) {
+			if ( $suffix === untrailingslashit( (string) wp_parse_url( self::mcp_url(), PHP_URL_PATH ) ) ) {
+				return null; // Ours.
+			}
+			if ( ! preg_match( '~^(' . $seg . ')/' . preg_quote( rest_get_url_prefix(), '~' ) . '/' . preg_quote( WPMCP_ROUTE_NAMESPACE . '/' . WPMCP_ROUTE, '~' ) . '$~', $suffix, $s ) ) {
+				return null;
+			}
+			$kind = 'resource';
+		} else {
+			$trim = (string) preg_replace( '~/wpmcp-oauth$~', '', $suffix ); // The issuer is the sub-folder, with or without /wpmcp-oauth.
+			if ( '' === $trim || ! preg_match( '~^(' . $seg . ')$~', $trim, $s ) ) {
+				return null;
+			}
+			$kind = 'server';
+		}
+		return self::subsite_exists( $s[1] ) ? array( 'kind' => $kind, 'prefix' => $s[1] ) : null;
+	}
+
+	/**
+	 * Is there a WordPress at this sub-folder of the host? A directory with wp-load.php or wp-config.php under the
+	 * document root, a multisite sub-site, or a prefix listed by the `wpmcp_subsite_prefixes` filter (use it when the
+	 * document root cannot be read from PHP): add_filter( 'wpmcp_subsite_prefixes', fn() => array( '/demo' ) );
+	 */
+	public static function subsite_exists( string $prefix ): bool {
+		if ( in_array( $prefix, (array) apply_filters( 'wpmcp_subsite_prefixes', array() ), true ) ) {
+			return true;
+		}
+		$docroot = isset( $_SERVER['DOCUMENT_ROOT'] ) ? rtrim( (string) wp_unslash( $_SERVER['DOCUMENT_ROOT'] ), '/\\' ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		if ( '' !== $docroot ) {
+			$dir = $docroot . $prefix;
+			if ( is_dir( $dir ) && ( file_exists( $dir . '/wp-load.php' ) || file_exists( $dir . '/wp-config.php' ) ) ) {
+				return true;
+			}
+		}
+		if ( function_exists( 'is_multisite' ) && is_multisite() && function_exists( 'get_blog_id_from_url' ) ) {
+			$host = wp_parse_url( self::base(), PHP_URL_HOST );
+			return $host && (int) get_blog_id_from_url( (string) $host, $prefix . '/' ) > 0;
+		}
+		return false;
+	}
+
+	/** Protected-resource metadata of the WP MCP Tools server of a sub-folder install, built from its path alone. */
+	public static function subsite_resource_metadata( string $prefix ): array {
+		$host = wp_parse_url( self::base() );
+		$root = $host['scheme'] . '://' . $host['host'] . ( isset( $host['port'] ) ? ':' . $host['port'] : '' );
+		return array(
+			'resource'                 => $root . $prefix . '/' . rest_get_url_prefix() . '/' . WPMCP_ROUTE_NAMESPACE . '/' . WPMCP_ROUTE,
+			'authorization_servers'    => array( $root . $prefix . '/wpmcp-oauth' ),
+			'scopes_supported'         => array( self::SCOPE ),
+			'bearer_methods_supported' => array( 'header' ),
+			'resource_name'            => 'WP MCP Tools (' . ltrim( $prefix, '/' ) . ')',
+		);
+	}
+
 	public static function route_own_wellknown(): void {
-		if ( self::is_own_wellknown_request() ) {
+		if ( self::is_own_wellknown_request() || null !== self::subsite_request() ) {
 			self::route();
 		}
 	}
@@ -235,6 +317,15 @@ class WPMCP_OAuth_Server {
 				break;
 			case 'server-metadata':
 				self::json( self::server_metadata() );
+				break;
+			case 'subsite-resource-metadata':
+				$sub = self::subsite_request();
+				self::json( $sub ? self::subsite_resource_metadata( $sub['prefix'] ) : array( 'error' => 'not_found' ), $sub ? 200 : 404 );
+				break;
+			case 'subsite-ignore':
+				// The metadata of a sub-folder install is served by that install (/demo/wpmcp-oauth/.well-known/...). Answer 404
+				// here so the client moves on to it instead of reading this site's metadata.
+				self::json( array( 'error' => 'not_found' ), 404 );
 				break;
 			case 'register':
 				self::register();
