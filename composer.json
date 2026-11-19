@@ -2,7 +2,7 @@
 	"name": "haitruongit/wp-mcp-tools",
 	"description": "WordPress abilities exposed as a dedicated MCP server. Bundles the WordPress MCP Adapter.",
 	"type": "wordpress-plugin",
-	"license": "GPL-2.0-or-later",
+	"license": "MIT",
 	"require": {
 		"php": ">=7.4",
 		"automattic/jetpack-autoloader": "^6.0",

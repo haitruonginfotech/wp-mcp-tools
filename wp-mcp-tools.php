@@ -2,11 +2,12 @@
 /**
  * Plugin Name:       WP MCP Tools
  * Description:       Registers WordPress abilities (posts, pages, CPT, taxonomies, SCF/ACF fields, media, menus, options, theme files) and exposes them as a dedicated MCP server through the bundled WordPress MCP Adapter, with OAuth 2.1 or Application Password sign-in.
- * Version:           0.18.1
+ * Version:           0.18.2
  * Requires at least: 6.9
  * Requires PHP:      7.4
  * Author:            Hai Truong IT
- * License:           GPL-2.0-or-later
+ * License:           MIT
+ * License URI:       https://opensource.org/license/mit
  * Update URI:        https://github.com/haitruonginfotech/wp-mcp-tools
  * Text Domain:       wp-mcp-tools
  *
@@ -15,7 +16,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WPMCP_VERSION', '0.18.1' );
+define( 'WPMCP_VERSION', '0.18.2' );
 define( 'WPMCP_FILE', __FILE__ );
 define( 'WPMCP_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WPMCP_URL', plugin_dir_url( __FILE__ ) );
