@@ -6,7 +6,7 @@
 	"require": {
 		"php": ">=7.4",
 		"automattic/jetpack-autoloader": "^6.0",
-		"wordpress/mcp-adapter": "~0.7.1"
+		"wordpress/mcp-adapter": "~0.7.2"
 	},
 	"config": {
 		"platform": {
